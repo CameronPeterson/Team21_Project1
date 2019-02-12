@@ -1,3 +1,5 @@
+#TODO Add functionality for recording address of each instruction and printing address
+
 import sys
 import os
 
