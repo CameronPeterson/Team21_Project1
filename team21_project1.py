@@ -65,8 +65,8 @@ class Disassembler:
 
         addrBase = 96
 
-        for instruction in self.input_file:                 # instructions from file added line by line to raw_instruction[]
-            raw_instruction.append(instruction.strip("\n")) # "\n" character is removed from the end of each line
+        for instruction in self.input_file:             # instructions from file added line by line to raw_instruction[]
+            raw_instruction.append(instruction[0:32])   # "\n" character is ignored
 
         for instruction in raw_instruction:             # first 11 bits of each instruction added to opcode[]
             opcode.append(instruction[0:11])
