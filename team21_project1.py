@@ -1,4 +1,3 @@
-#TODO Add functionality for recording address of each instruction and printing address
 
 import sys
 import os
@@ -14,6 +13,7 @@ arg3 = []
 arg1Str = []
 arg2Str = []
 arg3Str = []
+addr = []
 
 # Masks used in parsing machine code strings
 rnMask = 0x3E0
@@ -29,7 +29,6 @@ imdataMask = 0x1FFFE0
 # These globals are not yet implemented
 global mem
 global binMem
-
 
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
@@ -63,9 +62,11 @@ class Disassembler:
         global arg1Str
         global arg2Str
         global arg3Str
-        #TODO Last character of file is deleted if no newline at end of file. Add logic for edge case.
-        for instruction in self.input_file:             # instructions from file added line by line to raw_instruction[]
-            raw_instruction.append(instruction[:-1])    # Last bit is cut off to remove unecessary newline character
+
+        addrBase = 96
+
+        for instruction in self.input_file:                 # instructions from file added line by line to raw_instruction[]
+            raw_instruction.append(instruction.strip("\n")) # "\n" character is removed from the end of each line
 
         for instruction in raw_instruction:             # first 11 bits of each instruction added to opcode[]
             opcode.append(instruction[0:11])
@@ -76,22 +77,26 @@ class Disassembler:
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
                 arg2.append((int(raw_instruction[i], base=2) & rmMask) >> 16)
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
-                arg1Str.append(", R" + str(arg3[i]))
-                arg2Str.append(", R" + str(arg1[i]))
-                arg3Str.append(", R" + str(arg2[i]))
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("R" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
             elif int(opcode[i], base=2) == 1624:
                 opcode_str.append("SUB")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
                 arg2.append((int(raw_instruction[i], base=2) & rmMask) >> 16)
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
-                arg1Str.append(", R" + str(arg3[i]))
-                arg2Str.append(", R" + str(arg1[i]))
-                arg3Str.append(", R" + str(arg2[i]))
-    
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("R" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+
     # print_lists() prints most data from global lists
     def print_lists(self):
         for i in range(len(opcode_str)):
-            print(self.bin_to_spaced_string_r(raw_instruction[i]) + ' ' + opcode_str[i] + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            print(self.bin_to_spaced_string_r(raw_instruction[i]) + '\t' + str(addr[i]) + '\t' + opcode_str[i] + '\t' + arg1Str[i] + arg2Str[i] + arg3Str[i])
             
     # bin_to_spaced_string_r() formatted an r-format instruction
     def bin_to_spaced_string_r(self, bin):
