@@ -13,7 +13,7 @@ arg3 = []
 arg1Str = []
 arg2Str = []
 arg3Str = []
-addr = []
+mem = []
 
 # Masks used in parsing machine code strings
 rnMask = 0x3E0
@@ -27,8 +27,8 @@ imsftMask = 0x600000
 imdataMask = 0x1FFFE0
 
 # These globals are not yet implemented
-global mem
 global binMem
+
 
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
@@ -44,10 +44,10 @@ class Disassembler:
     # It also prints the names of the I/O files
     def get_io_params(self):
         for i in range(len(sys.argv)):
-            if (sys.argv[i] == '-i' and i < (len(sys.argv) - 1)):
+            if sys.argv[i] == '-i' and i < (len(sys.argv) - 1):
                 self.input_file_name = sys.argv[i + 1]
                 print(self.input_file_name)
-            elif (sys.argv[i] == '-o' and i < (len(sys.argv) - 1)):
+            elif sys.argv[i] == '-o' and i < (len(sys.argv) - 1):
                 self.output_file_name = sys.argv[i + 1]
                 print(self.output_file_name)
 
@@ -63,7 +63,7 @@ class Disassembler:
         global arg2Str
         global arg3Str
 
-        addrBase = 96
+        mem_base = 96
 
         for instruction in self.input_file:             # instructions from file added line by line to raw_instruction[]
             raw_instruction.append(instruction[0:32])   # "\n" character is ignored
@@ -72,7 +72,8 @@ class Disassembler:
             opcode.append(instruction[0:11])
 
         for i in range(len(opcode)):                    # opcodes are evaluated as bins. if they match a known opcode,
-            if int(opcode[i], base=2) == 1112:          # global lists are populated with opcodes, args, formatted instruction
+            # R-format instructions
+            if int(opcode[i], base=2) == 1112:
                 opcode_str.append("ADD")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
                 arg2.append((int(raw_instruction[i], base=2) & rmMask) >> 16)
@@ -80,8 +81,8 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
+                mem.append(mem_base)
+                mem_base += 4
             elif int(opcode[i], base=2) == 1624:
                 opcode_str.append("SUB")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -90,19 +91,97 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
+                mem.append(mem_base)
+                mem_base += 4
+            elif int(opcode[i], base=2) == 1691:
+                opcode_str.append("LSL")
+                # TODO
+            elif int(opcode[i], base=2) == 1690:
+                opcode_str.append("LSR")
+                # TODO
+            elif int(opcode[i], base=2) == 1104:
+                opcode_str.append("AND")
+                # TODO
+            elif int(opcode[i], base=2) == 1360:
+                opcode_str.append("ORR")
+                # TODO
+            elif int(opcode[i], base=2) == 1616:
+                opcode_str.append("EOR")
+                # TODO
+
+            # I-format instructions
+            elif 1160 <= int(opcode[i], base=2) <= 1161:
+                opcode_str.append("ADDI")
+                # TODO
+            elif 1672 <= int(opcode[i], base=2) <= 1673:
+                opcode_str.append("SUBI")
+                # TODO
+
+            # D-format instructions
+            elif int(opcode[i], base=2) == 1986:
+                opcode_str.append("LDUR")
+                # TODO
+            elif int(opcode[i], base=2) == 1984:
+                opcode_str.append("STUR")
+                # TODO
+
+            # CB-format instructions
+            elif 1440 <= int(opcode[i], base=2) <= 1447:
+                opcode_str.append("CBZ")
+                # TODO
+            elif 1448 <= int(opcode[i], base=2) <= 1455:
+                opcode_str.append("CBNZ")
+                # TODO
+
+            # IM-format instructions
+            elif 1684 <= int(opcode[i], base=2) <= 1687:
+                opcode_str.append("MOVZ")
+                # TODO
+            elif 1940 <= int(opcode[i], base=2) <= 1943:
+                opcode_str.append("MOVK")
+                # TODO
+
+            # B-format instructions
+            elif 160 <= int(opcode[i], base=2) <= 191:
+                opcode_str.append("B")
+                # TODO
+            elif 1448 <= int(opcode[i], base=2) <= 1455:
+                opcode_str.append("CBNZ")
+                # TODO
+
+            # NOP instruction
+            elif int(opcode[i], base=2) == 0:
+                opcode_str.append("NOP")
+                # TODO (confirm that a NOP is == 0 in machine code before writing the rest of this)
 
     # print_lists() prints most data from global lists
     def print_lists(self):
         for i in range(len(opcode_str)):
-            print(self.bin_to_spaced_string_r(raw_instruction[i]) + '\t' + str(addr[i]) + '\t' + opcode_str[i] + '\t' + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            print(self.bin_to_spaced_string_r(raw_instruction[i]) + '\t' + str(mem[i]) + '\t' + opcode_str[i]
+                  + '\t' + arg1Str[i] + arg2Str[i] + arg3Str[i])
             
-    # bin_to_spaced_string_r() formatted an r-format instruction
-    def bin_to_spaced_string_r(self, bin):
-        spacedStr = bin[0:11] + " " + bin[11:16] + " " + bin[16:23] + " " + bin[23:28] + " " + bin[28:33]
+    # bin_to_spaced_string_r() formats a 32-bit binary string as an r-format instruction
+    def bin_to_spaced_string_r(self, unformatted_str):
+        spacedStr = unformatted_str[0:11] + " " + unformatted_str[11:16] + " " + unformatted_str[16:23]+" " +\
+                    unformatted_str[23:28] + " " + unformatted_str[28:33]
         return spacedStr
 
-    
+    def bin_to_spaced_string_i(self, unformatted_str):
+        # TODO generate i-type formatted binary string
+        return
+
+    def bin_to_spaced_string_d(self, unformatted_str):
+        # TODO generate d-type formatted binary string
+        return
+
+    def bin_to_spaced_string_im(self, unformatted_str):
+        # TODO
+        return
+
+    def bin_to_spaced_string_b(self, unformatted_str):
+        # TODO
+        return
+
+
 if __name__ == "__main__":                              # Only runs if program executed as script
     disassembler = Disassembler()
