@@ -1,3 +1,7 @@
+# TODO: Implement handling for LSR, LSL, BREAK, and 32 bit 2s compliment integers
+# TODO: Replace bit slicing with mask manipulation on lines with "USE MASK" comment
+# TODO: Consolidate redundant code in print_lists()
+# TODO: Adjust formatting to match expected output
 
 import sys
 import os
@@ -46,10 +50,10 @@ class Disassembler:
         for i in range(len(sys.argv)):
             if (sys.argv[i] == '-i' and i < (len(sys.argv) - 1)):
                 self.input_file_name = sys.argv[i + 1]
-                print(self.input_file_name)
+                print(self.input_file_name)         #debugging
             elif (sys.argv[i] == '-o' and i < (len(sys.argv) - 1)):
                 self.output_file_name = sys.argv[i + 1]
-                print(self.output_file_name)
+                print(self.output_file_name)        #debugging
 
     # input_to_lists() pulls data from input file and distributes data to appropriate global lists.
     # Input instructions are used to generate lists of opcodes, args, and formatted instructions
@@ -92,17 +96,157 @@ class Disassembler:
                 arg3Str.append("R" + str(arg2[i]))
                 addr.append(addrBase)
                 addrBase += 4
+            elif int(opcode[i], base=2) == 1104:
+                opcode_str.append("AND")
+                arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(raw_instruction[i], base=2) & rmMask) >> 16)
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("R" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            elif int(opcode[i], base=2) == 1360:
+                opcode_str.append("ORR")
+                arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(raw_instruction[i], base=2) & rmMask) >> 16)
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("R" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            elif 160 <= int(opcode[i], base=2) <= 191:
+                opcode_str.append("B")
+                arg1.append((int(raw_instruction[i][6:33], base=2)))    #USE MASK
+                arg2.append(" ")
+                arg3.append(" ")
+                arg1Str.append(" ")
+                arg2Str.append("#" + str(arg1[i]))
+                arg3Str.append(" ")
+                addr.append(addrBase)
+                addrBase += 4
+            elif int(opcode[i], base=2) in (1160, 1161):
+                opcode_str.append("ADDI")
+                arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(raw_instruction[i], base=2) & imMask) >> 10)
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("#" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            elif int(opcode[i], base=2) in (1672, 1673):
+                opcode_str.append("SUBI")
+                arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(raw_instruction[i], base=2) & imMask) >> 10)
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("#" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            elif 1440 <= int(opcode[i], base=2) <= 1447:
+                opcode_str.append("CBZ")
+                arg1.append((int(raw_instruction[i][8:27], base=2)))    #USE MASK
+                arg2.append(" ")
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("#" + str(arg1[i]))
+                arg3Str.append(" ")
+                addr.append(addrBase)
+                addrBase += 4
+            elif 1448 <= int(opcode[i], base=2) <= 1455:
+                opcode_str.append("CBNZ")
+                arg1.append((int(raw_instruction[i][8:27], base=2)))    #USE MASK
+                arg2.append(" ")
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("#" + str(arg1[i]))
+                arg3Str.append(" ")
+                addr.append(addrBase)
+                addrBase += 4
+            elif 1684 <= int(opcode[i], base=2) <= 1687:
+                opcode_str.append("MOVZ")
+                arg1.append((int(raw_instruction[i], base=2) & imdataMask) >> 5)
+                arg2.append((int(raw_instruction[i][9:11], base=2)) << 4)       #USE MASK
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append(str(arg1[i]) + ", ")
+                arg3Str.append("LSL " + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            elif 1940 <= int(opcode[i], base=2) <= 1943:
+                opcode_str.append("MOVK")
+                arg1.append((int(raw_instruction[i], base=2) & imdataMask) >> 5)
+                arg2.append((int(raw_instruction[i][9:11], base=2)) << 4)       #USE MASK
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append(str(arg1[i]) + ", ")
+                arg3Str.append("LSL " + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
+            #Else block for testing, debugging
+            else:
+                opcode_str.append("NOT IMPLEMENTED")
+                arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
+                arg2.append((int(raw_instruction[i], base=2) & imMask) >> 10)
+                arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
+                arg1Str.append("R" + str(arg3[i]) + ", ")
+                arg2Str.append("R" + str(arg1[i]) + ", ")
+                arg3Str.append("#" + str(arg2[i]))
+                addr.append(addrBase)
+                addrBase += 4
 
     # print_lists() prints most data from global lists
     def print_lists(self):
+        outfile = open(self.output_file_name + "_dis.txt", 'w')
         for i in range(len(opcode_str)):
-            print(self.bin_to_spaced_string_r(raw_instruction[i]) + '\t' + str(addr[i]) + '\t' + opcode_str[i] + '\t' + arg1Str[i] + arg2Str[i] + arg3Str[i])
-            
+            if int(opcode[i], base=2) in (1104, 1112, 1360, 1624, 1690, 1692, 1872):
+                print (self.bin_to_spaced_string_r(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])   #debugging
+                outfile.write(self.bin_to_spaced_string_r(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i] + "\n")
+            elif int(opcode[i], base=2) in (1160, 1161, 1672, 1673):
+                print (self.bin_to_spaced_string_i(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write (self.bin_to_spaced_string_i(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            elif 160 <= int(opcode[i], base=2) <= 191:
+                print (self.bin_to_spaced_string_b(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_b(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            elif 1440 <= int(opcode[i], base=2) <= 1455:
+                print (self.bin_to_spaced_string_cb(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_cb(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+            elif (1684 <= int(opcode[i], base=2) <= 1687) | (1940 <= int(opcode[i], base=2) <= 1943):
+                print (self.bin_to_spaced_string_im(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_im(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
+                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+
+
     # bin_to_spaced_string_r() formatted an r-format instruction
     def bin_to_spaced_string_r(self, bin):
-        spacedStr = bin[0:11] + " " + bin[11:16] + " " + bin[16:23] + " " + bin[23:28] + " " + bin[28:33]
+        spacedStr = bin[0:11] + " " + bin[11:16] + " " + bin[16:22] + " " + bin[22:27] + " " + bin[27:33]
         return spacedStr
 
-    
+    def bin_to_spaced_string_i(self, bin):
+        spacedStr = bin[0:10] + " " + bin[10:22] + " " + bin[22:27] + " " + bin[27:33]
+        return spacedStr
+
+    def bin_to_spaced_string_b(self, bin):
+        spacedStr = bin[0:6] + " " + bin[6:33]
+        return spacedStr
+
+    def bin_to_spaced_string_cb(self, bin):
+        spacedStr = bin[0:8] + " " + bin[8:27] + " " + bin[27:33]
+        return spacedStr
+
+    def bin_to_spaced_string_im(self, bin):
+        spacedStr = bin[0:9] + " " + bin[9:11] + " " + bin[11:27] + " " + bin[27:33]
+        return spacedStr
+
 if __name__ == "__main__":                              # Only runs if program executed as script
     disassembler = Disassembler()
