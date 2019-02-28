@@ -1,8 +1,6 @@
-# TODO: Fix 2s complement calculation and output
-# TODO: Consolidate redundant code in print_lists()
-# TODO: Adjust formatting to match expected output
-# TODO: Add comments where needed
 # TODO: Create test input
+# TODO: Adjust BREAK to match instructions....?
+# TODO: Handle signed immediate values. See Page 48 of Lec5Proj1-1.pptx
 
 import sys
 import os
@@ -32,6 +30,7 @@ imsftMask = 0x600000
 imdataMask = 0x1FFFE0
 brMask = 0x3FFFFFF
 brkMask = 0x1FFFFF
+twosMask = 0x80000000
 
 # These globals are not yet implemented
 global mem
@@ -122,11 +121,11 @@ class Disassembler:
             elif 160 <= int(opcode[i], base=2) <= 191:
                 opcode_str.append("B")
                 arg1.append((int(raw_instruction[i], base=2) & brMask))
-                arg2.append(" ")
-                arg3.append(" ")
-                arg1Str.append(" ")
+                arg2.append("")
+                arg3.append("")
+                arg1Str.append("")
                 arg2Str.append("#" + str(arg1[i]))
-                arg3Str.append(" ")
+                arg3Str.append("")
                 addr.append(addrBase)
                 addrBase += 4
             elif int(opcode[i], base=2) in (1160, 1161):
@@ -239,25 +238,6 @@ class Disassembler:
                 arg3Str.append("#" + str(arg2[i]))
                 addr.append(addrBase)
                 addrBase += 4
-            elif int(opcode[i], base=2) == 2038:
-                opcode_str.append("BREAK")
-                arg1.append("")
-                arg2.append("")
-                arg3.append("")
-                arg1Str.append("")
-                arg2Str.append("")
-                arg3Str.append("")
-                j = i + 1
-                while j < len(raw_instruction):
-                    opcode_str.append(self.twos_comp(int(raw_instruction[j])))
-                    arg1.append("")
-                    arg2.append("")
-                    arg3.append("")
-                    arg1Str.append("")
-                    arg2Str.append("")
-                    arg3Str.append("")
-                    j += 1
-                break
             elif int(opcode[i], base=2) == 0:
                 opcode_str.append("NOP")
                 arg1.append("")
@@ -266,79 +246,81 @@ class Disassembler:
                 arg1Str.append("")
                 arg2Str.append("")
                 arg3Str.append("")
-
-    def twos_comp(self, val):
-        if (val & (1 << (31))) != 0:  # if sign bit is set
-            val = val - (1 << 31)  # compute negative value
-        return str(val)
+            elif int(opcode[i], base=2) == 2038:
+                opcode_str.append("BREAK")
+                arg1.append("")
+                arg2.append("")
+                arg3.append("")
+                arg1Str.append("")
+                arg2Str.append("")
+                arg3Str.append("")
+                i += 1
+                while i < len(raw_instruction):
+                    #yeilds 2s complement of raw_instruction[i]
+                    #if raw_instruction[i][0] == "1":
+                    if int(raw_instruction[i], base=2) & twosMask == twosMask:
+                        opcode_str.append(str(int(raw_instruction[i], base=2) - (1 << 32)))
+                    else:
+                        opcode_str.append(str(int(raw_instruction[i], base=2)))
+                    arg1.append("")
+                    arg2.append("")
+                    arg3.append("")
+                    arg1Str.append("")
+                    arg2Str.append("")
+                    arg3Str.append("")
+                    i += 1
+                break
 
         # print_lists() prints most data from global lists
     def print_lists(self):
         outfile = open(self.output_file_name + "_dis.txt", 'w')
         for i in range(len(opcode_str)):
             if int(opcode[i], base=2) in (1104, 1112, 1360, 1624, 1690, 1691, 1872):
-                print (self.bin_to_spaced_string_r(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])   #debugging
-                outfile.write(self.bin_to_spaced_string_r(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i] + "\n")
+                outfile.write(self.bin_to_spaced_string_r(raw_instruction[i]))
             elif int(opcode[i], base=2) in (1160, 1161, 1672, 1673):
-                print (self.bin_to_spaced_string_i(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-                outfile.write (self.bin_to_spaced_string_i(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_i(raw_instruction[i]))
             elif 160 <= int(opcode[i], base=2) <= 191:
-                print (self.bin_to_spaced_string_b(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-                outfile.write(self.bin_to_spaced_string_b(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_b(raw_instruction[i]))
             elif 1440 <= int(opcode[i], base=2) <= 1455:
-                print (self.bin_to_spaced_string_cb(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-                outfile.write(self.bin_to_spaced_string_cb(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_cb(raw_instruction[i]))
             elif (1684 <= int(opcode[i], base=2) <= 1687) | (1940 <= int(opcode[i], base=2) <= 1943):
-                print (self.bin_to_spaced_string_im(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-                outfile.write(self.bin_to_spaced_string_im(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_im(raw_instruction[i]))
             elif int(opcode[i], base=2) in (1984, 1986):
-                print (self.bin_to_spaced_string_d(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                    i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-                outfile.write(
-                    self.bin_to_spaced_string_d(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[
-                        i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+                outfile.write(self.bin_to_spaced_string_d(raw_instruction[i]))
             elif int(opcode[i], base=2) == 2038:
-                print (self.bin_to_spaced_string_brk(raw_instruction[i]) + "\t" + opcode_str[i])
-                outfile.write(self.bin_to_spaced_string_brk(raw_instruction[i]) + "\t" + opcode_str[i])
+                outfile.write(self.bin_to_spaced_string_brk(raw_instruction[i]) + "\t" + opcode_str[i] + "\n")
+                continue
             else:
-                print (raw_instruction[i] + "\t" + opcode_str[i])
-                outfile.write(raw_instruction[i] + "\t" + opcode_str[i])
-
+                outfile.write(raw_instruction[i] + "\t" + opcode_str[i] + "\n")
+                continue
+            outfile.write("\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i] + "\n")
 
     # bin_to_spaced_string_r() formatted an r-format instruction
     def bin_to_spaced_string_r(self, bin):
-        spacedStr = bin[0:11] + " " + bin[11:16] + " " + bin[16:22] + " " + bin[22:27] + " " + bin[27:33]
+        spacedStr = bin[0:11] + " " + bin[11:16] + " " + bin[16:22] + " " + bin[22:27] + " " + bin[27:32]
         return spacedStr
 
     def bin_to_spaced_string_i(self, bin):
-        spacedStr = bin[0:10] + " " + bin[10:22] + " " + bin[22:27] + " " + bin[27:33]
+        spacedStr = bin[0:10] + " " + bin[10:22] + " " + bin[22:27] + " " + bin[27:32]
         return spacedStr
 
     def bin_to_spaced_string_b(self, bin):
-        spacedStr = bin[0:6] + " " + bin[6:33]
+        spacedStr = bin[0:6] + " " + bin[6:32]
         return spacedStr
 
     def bin_to_spaced_string_cb(self, bin):
-        spacedStr = bin[0:8] + " " + bin[8:27] + " " + bin[27:33]
+        spacedStr = bin[0:8] + " " + bin[8:27] + " " + bin[27:32]
         return spacedStr
 
     def bin_to_spaced_string_im(self, bin):
-        spacedStr = bin[0:9] + " " + bin[9:11] + " " + bin[11:27] + " " + bin[27:33]
+        spacedStr = bin[0:9] + " " + bin[9:11] + " " + bin[11:27] + " " + bin[27:32]
         return spacedStr
 
     def bin_to_spaced_string_d(self, bin):
-        spacedStr = bin[0:11] + " " + bin[11:20] + " " + bin[20:22] + " " + bin[22:27] + " " + bin[27:33]
+        spacedStr = bin[0:11] + " " + bin[11:20] + " " + bin[20:22] + " " + bin[22:27] + " " + bin[27:32]
         return spacedStr
     def bin_to_spaced_string_brk(self, bin):
-        spacedStr = bin[0:8] + " " + bin[8:11] + " " + bin[11:16] + " " + bin[16:21] + " " + bin[21:26] + " " + bin[26:33]
+        spacedStr = bin[0:8] + " " + bin[8:11] + " " + bin[11:16] + " " + bin[16:21] + " " + bin[21:26] + " " + bin[26:32]
         return spacedStr
 
 if __name__ == "__main__":                              # Only runs if program executed as script
