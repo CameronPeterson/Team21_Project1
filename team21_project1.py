@@ -86,8 +86,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1624:
                 opcode_str.append("SUB")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -96,8 +94,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1104:
                 opcode_str.append("AND")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -106,8 +102,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1360:
                 opcode_str.append("ORR")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -116,8 +110,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif 160 <= int(opcode[i], base=2) <= 191:
                 opcode_str.append("B")
                 arg1.append((int(raw_instruction[i], base=2) & brMask))
@@ -126,8 +118,6 @@ class Disassembler:
                 arg1Str.append("")
                 arg2Str.append("#" + str(arg1[i]))
                 arg3Str.append("")
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) in (1160, 1161):
                 opcode_str.append("ADDI")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -136,8 +126,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) in (1672, 1673):
                 opcode_str.append("SUBI")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -146,28 +134,22 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif 1440 <= int(opcode[i], base=2) <= 1447:
                 opcode_str.append("CBZ")
                 arg1.append((int(raw_instruction[i], base=2) & addr2Mask) >> 5)
-                arg2.append(" ")
+                arg2.append("")
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("#" + str(arg1[i]))
-                arg3Str.append(" ")
-                addr.append(addrBase)
-                addrBase += 4
+                arg3Str.append("")
             elif 1448 <= int(opcode[i], base=2) <= 1455:
                 opcode_str.append("CBNZ")
                 arg1.append((int(raw_instruction[i], base=2) & addr2Mask) >> 5)
-                arg2.append(" ")
+                arg2.append("")
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("#" + str(arg1[i]))
-                arg3Str.append(" ")
-                addr.append(addrBase)
-                addrBase += 4
+                arg3Str.append("")
             elif 1684 <= int(opcode[i], base=2) <= 1687:
                 opcode_str.append("MOVZ")
                 arg1.append((int(raw_instruction[i], base=2) & imdataMask) >> 5)
@@ -176,8 +158,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append(str(arg1[i]) + ", ")
                 arg3Str.append("LSL " + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif 1940 <= int(opcode[i], base=2) <= 1943:
                 opcode_str.append("MOVK")
                 arg1.append((int(raw_instruction[i], base=2) & imdataMask) >> 5)
@@ -186,8 +166,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append(str(arg1[i]) + ", ")
                 arg3Str.append("LSL " + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1986:
                 opcode_str.append("LDUR")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -196,8 +174,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("[R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]) + "]")
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1984:
                 opcode_str.append("STUR")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -206,8 +182,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("[R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]) + "]")
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1872:
                 opcode_str.append("EOR")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -216,8 +190,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("R" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1690:
                 opcode_str.append("LSR")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -226,8 +198,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 1691:
                 opcode_str.append("LSL")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
@@ -236,8 +206,6 @@ class Disassembler:
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]))
-                addr.append(addrBase)
-                addrBase += 4
             elif int(opcode[i], base=2) == 0:
                 opcode_str.append("NOP")
                 arg1.append("")
@@ -254,6 +222,8 @@ class Disassembler:
                 arg1Str.append("")
                 arg2Str.append("")
                 arg3Str.append("")
+                addr.append(addrBase)
+                addrBase += 4
                 i += 1
                 while i < len(raw_instruction):
                     #yeilds 2s complement of raw_instruction[i]
@@ -268,8 +238,12 @@ class Disassembler:
                     arg1Str.append("")
                     arg2Str.append("")
                     arg3Str.append("")
+                    addr.append(addrBase)
+                    addrBase += 4
                     i += 1
                 break
+            addr.append(addrBase)
+            addrBase += 4
 
         # print_lists() prints most data from global lists
     def print_lists(self):
@@ -288,10 +262,10 @@ class Disassembler:
             elif int(opcode[i], base=2) in (1984, 1986):
                 outfile.write(self.bin_to_spaced_string_d(raw_instruction[i]))
             elif int(opcode[i], base=2) == 2038:
-                outfile.write(self.bin_to_spaced_string_brk(raw_instruction[i]) + "\t" + opcode_str[i] + "\n")
+                outfile.write(self.bin_to_spaced_string_brk(raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\n")
                 continue
             else:
-                outfile.write(raw_instruction[i] + "\t" + opcode_str[i] + "\n")
+                outfile.write((raw_instruction[i]) + "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\n")
                 continue
             outfile.write("\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i] + "\n")
 
