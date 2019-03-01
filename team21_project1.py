@@ -28,11 +28,6 @@ brMask = 0x3FFFFFF
 brkMask = 0x1FFFFF
 twosMask = 0x80000000
 
-# These globals are not yet implemented
-global mem
-global binMem
-
-
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
     def __init__(self):
@@ -109,7 +104,7 @@ class Disassembler:
                 arg3Str.append("R" + str(arg2[i]))
             elif 160 <= int(opcode[i], base=2) <= 191:
                 opcode_str.append("B")
-                arg1.append((int(raw_instruction[i], base=2) & brMask))
+                arg1.append(self.unsigned2signed(((int(raw_instruction[i], base=2) & brMask)), 26))
                 arg2.append("")
                 arg3.append("")
                 arg1Str.append("")
@@ -118,13 +113,7 @@ class Disassembler:
             elif int(opcode[i], base=2) in (1160, 1161):
                 opcode_str.append("ADDI")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
-
-                # handles signed immediate value
-                if ((twosMask >> 10) & (int(raw_instruction[i], base=2)) == (twosMask >> 10)):
-                    arg2.append(((int(raw_instruction[i], base=2) & imMask) >> 10) - (1 << 12))
-                else:
-                    arg2.append((int(raw_instruction[i], base=2) & imMask) >> 10)
-
+                arg2.append(self.unsigned2signed(((int(raw_instruction[i], base=2) & imMask) >> 10), 12))
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
@@ -132,20 +121,14 @@ class Disassembler:
             elif int(opcode[i], base=2) in (1672, 1673):
                 opcode_str.append("SUBI")
                 arg1.append((int(raw_instruction[i], base=2) & rnMask) >> 5)
-
-                # handles signed immediate value
-                if ((twosMask >> 10) & (int(raw_instruction[i], base=2)) == (twosMask >> 10)):
-                    arg2.append(((int(raw_instruction[i], base=2) & imMask) >> 10) - (1 << 12))
-                else:
-                    arg2.append((int(raw_instruction[i], base=2) & imMask) >> 10)
-
+                arg2.append(self.unsigned2signed(((int(raw_instruction[i], base=2) & imMask) >> 10), 12))
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
                 arg2Str.append("R" + str(arg1[i]) + ", ")
                 arg3Str.append("#" + str(arg2[i]))
             elif 1440 <= int(opcode[i], base=2) <= 1447:
                 opcode_str.append("CBZ")
-                arg1.append((int(raw_instruction[i], base=2) & addr2Mask) >> 5)
+                arg1.append(self.unsigned2signed(((int(raw_instruction[i], base=2) & addr2Mask) >> 5), 19))
                 arg2.append("")
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
@@ -153,7 +136,7 @@ class Disassembler:
                 arg3Str.append("")
             elif 1448 <= int(opcode[i], base=2) <= 1455:
                 opcode_str.append("CBNZ")
-                arg1.append((int(raw_instruction[i], base=2) & addr2Mask) >> 5)
+                arg1.append(self.unsigned2signed(((int(raw_instruction[i], base=2) & addr2Mask) >> 5), 19))
                 arg2.append("")
                 arg3.append((int(raw_instruction[i], base=2) & rdMask) >> 0)
                 arg1Str.append("R" + str(arg3[i]) + ", ")
@@ -237,12 +220,7 @@ class Disassembler:
                 addrBase += 4
                 i += 1
                 while i < len(raw_instruction):
-                    # yeilds 2s complement of raw_instruction[i]
-                    # if raw_instruction[i][0] == "1":
-                    if int(raw_instruction[i], base=2) & twosMask == twosMask:
-                        opcode_str.append(str(int(raw_instruction[i], base=2) - (1 << 32)))
-                    else:
-                        opcode_str.append(str(int(raw_instruction[i], base=2)))
+                    opcode_str.append(str(self.unsigned2signed(str((int(raw_instruction[i], base=2))), 32)))
                     arg1.append("")
                     arg2.append("")
                     arg3.append("")
@@ -256,7 +234,12 @@ class Disassembler:
             addr.append(addrBase)
             addrBase += 4
 
-        # print_lists() prints most data from global lists
+    #returns 2s complement of bin
+    def unsigned2signed(self, bin, bitNum):
+        if ((twosMask >> (32 - bitNum) & (int(bin)))) == (twosMask >> (32 - bitNum)):
+            return int(bin) - (1 << bitNum)
+        else:
+            return bin
 
     def print_lists(self):
         outfile = open(self.output_file_name + "_dis.txt", 'w')
@@ -319,7 +302,6 @@ class Disassembler:
         spacedStr = bin[0:8] + " " + bin[8:11] + " " + bin[11:16] + " " + bin[16:21] + " " + bin[21:26] + " " + bin[
                                                                                                                 26:32]
         return spacedStr
-
 
 if __name__ == "__main__":  # Only runs if program executed as script
     disassembler = Disassembler()
