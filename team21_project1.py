@@ -44,10 +44,8 @@ class Disassembler:
         for i in range(len(sys.argv)):
             if (sys.argv[i] == '-i' and i < (len(sys.argv) - 1)):
                 self.input_file_name = sys.argv[i + 1]
-                print(self.input_file_name)  # debugging
             elif (sys.argv[i] == '-o' and i < (len(sys.argv) - 1)):
                 self.output_file_name = sys.argv[i + 1]
-                print(self.output_file_name)  # debugging
 
     # input_to_lists() pulls data from input file and distributes data to appropriate global lists.
     # Input instructions are used to generate lists of opcodes, args, and formatted instructions
@@ -266,6 +264,7 @@ class Disassembler:
                 continue
             outfile.write(
                 "\t" + str(addr[i]) + "\t" + opcode_str[i] + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i] + "\n")
+        outfile.write("\n")
 
     # returns a string in R-format
     def bin_to_spaced_string_r(self, bin):
