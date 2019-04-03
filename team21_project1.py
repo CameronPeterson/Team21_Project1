@@ -28,6 +28,9 @@ brMask = 0x3FFFFFF
 brkMask = 0x1FFFFF
 twosMask = 0x80000000
 
+class Simulator:
+    
+
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
     def __init__(self):
