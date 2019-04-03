@@ -14,6 +14,11 @@ arg2Str = []
 arg3Str = []
 addr = []
 
+r00 = []
+r08 = []
+r16 = []
+r24 = []
+
 # Masks used in parsing machine code strings
 rnMask = 0x3E0
 rmMask = 0x1F0000
@@ -29,13 +34,54 @@ brkMask = 0x1FFFFF
 twosMask = 0x80000000
 
 class Simulator:
-    
+    def __init__(self):
+        self.input_file_name = 'test1_bin.txt'
+        self.output_file_name = 'SIMOUT'
+        self.input_file = open(str(self.input_file_name))
+        self.simulate_registers()
+        self.print_lists()
+
+
+    def simulate_registers(self):
+        r00[:8] = [0] * 8
+        r08[:8] = [0] * 8
+        r16[:8] = [0] * 8
+        r24[:8] = [0] * 8
+
+
+    def print_lists(self):
+        #outfile = open(self.output_file_name + "_dis.txt", 'w')
+        cycleCount = 1
+        for i in range(len(opcode)):
+            print ("====================\n")
+            print ("cycle:" + str(cycleCount)) + " " + str(addr[i]) + " " + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[i] + arg3Str[i]
+            print ("\n")
+            print ("registers:\n")
+            #print (r00[0] + " " + r00[1] + " " + r00[2] + " " + r00[3] + " " + r00[4] + " " + r00[5] + " " + r00[6] + " " + r00[7])
+            #print (r04[0] + " " + r04[1] + " " + r04[2] + " " + r04[3] + " " + r04[4] + " " + r04[5] + " " + r04[
+             #   6] + " " + r00[7])
+            #print (r08[0] + " " + r08[1] + " " + r08[2] + " " + r08[3] + " " + r08[4] + " " + r08[5] + " " + r08[
+             #   6] + " " + r08[7])
+            #print (r16[0] + " " + r16[1] + " " + r16[2] + " " + r16[3] + " " + r16[4] + " " + r16[5] + " " + r16[
+              #  6] + " " + r16[7])
+            print ("r00:")
+            print ("r08:")
+            print ("r16:")
+            print ("r24:")
+            print ("\n")
+            print ("data:")
+            print ("120:")
+            print ("152:")
+            cycleCount += 1
+
+
+
 
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
     def __init__(self):
-        self.input_file_name = ''
-        self.output_file_name = ''
+        self.input_file_name = 'test1_bin.txt'
+        self.output_file_name = 'OUTTEST'
         self.get_io_params()
         self.input_file = open(str(self.input_file_name))
         self.input_to_lists()
@@ -307,3 +353,4 @@ class Disassembler:
 
 if __name__ == "__main__":  # Only runs if program executed as script
     disassembler = Disassembler()
+    simulator = Simulator()
