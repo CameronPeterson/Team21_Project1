@@ -73,10 +73,10 @@ class Simulator:
 
             elif int(opcode[i], base=2) == 1624:        #SUB
                 regs[arg3[i]] = regs[arg1[i]] - regs[arg2[i]]
-            #
+            
             elif int(opcode[i], base=2) == 1104:        #AND
                 regs[arg3[i]] = regs[arg1[i]] & regs[arg2[i]]
-            #
+            
             elif int(opcode[i], base=2) == 1360:        #ORR
                 regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
 
@@ -105,14 +105,14 @@ class Simulator:
                     i = i + arg1[i]
                     cycleCount += 1
                     continue
-            #
+            
             elif 1684 <= int(opcode[i], base=2) <= 1687:#MOVZ
                 regs[arg3[i]] = 0
                 regs[arg3[i]] = arg1[i] << arg2[i]
-            #
+            
             elif 1940 <= int(opcode[i], base=2) <= 1943:#MOVK
                 regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
-            #
+            
             elif int(opcode[i], base=2) == 1986:        #LDUR
                 regs[arg3[i]] = data[arg2[i]-1]
 
@@ -120,10 +120,10 @@ class Simulator:
                 while len(data) < arg2[i]:
                     data.extend(dataExt)
                 data[arg2[i]-1] = regs[arg3[i]]
-            #
+            
             elif int(opcode[i], base=2) == 1872:        #EOR
                 regs[arg3[i]] = regs[arg1[i]] ^ regs[arg2[i]]
-            #
+            
             elif int(opcode[i], base=2) == 1690:        #LSR
                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
 
