@@ -61,7 +61,6 @@ class Simulator:
         self.output_file_name = ''
         self.input_file = open(str(self.input_file_name))
         self.simulate_regs()
-        self.print_lists()
 
     def simulate_regs(self):
 
