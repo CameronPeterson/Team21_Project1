@@ -1,5 +1,3 @@
-#TODO: Implement '0' fill mechanism in LSR
-#TODO: Resolve TypeError exception raised near end of execution
 #TODO: Direct Simulator output to file
 #TODO: Figure out what LaKomski wants us to do with data output. See block comment below.
 
