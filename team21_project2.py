@@ -57,9 +57,10 @@ class Simulator:
 
     def __init__(self):
 
-        self.input_file_name = 'test1_bin.txt'
-        self.output_file_name = ''
+        self.input_file_name = sys.argv[3]
+        self.output_file_name = sys.argv[5]
         self.input_file = open(str(self.input_file_name))
+        self.outfile = open(self.output_file_name + "_sim.txt", 'w')
         self.simulate_regs()
 
     def simulate_regs(self):
@@ -136,14 +137,16 @@ class Simulator:
 
             # elif int(opcode[i], base=2) == 2038:      #BREAK
 
-            self.print_lists(i, cycleCount)
+            #Use this for debugging
+            #self.print_lists(i, cycleCount)
+            self.out_sim_to_file(i, cycleCount)
             cycleCount += 1
             i += 1
 
     def print_lists(self, i, cycleCount):
         print ("====================\n")
-        print ("cycle:" + str(cycleCount)) + " " + str(addr[i]) + " " + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[
-            i] + arg3Str[i]
+        print ("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[
+            i] + arg3Str[i])
         print ("\n")
         print ("registers:\n")
         for j in range(32):
@@ -166,6 +169,34 @@ class Simulator:
             print str(data[j]) + "\t",
             if j % 8 == 7:
                 print ("\n"),
+
+    def out_sim_to_file(self, i, cycleCount):
+        self.outfile.write("====================\n")
+        self.outfile.write("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+        self.outfile.write("\n\n")
+        self.outfile.write("registers:\n")
+        for j in range(32):
+            if j % 8 == 0:
+                self.outfile.write("r" + str(j).zfill(2) + ":\t")
+            if j % 8 != 7:
+                self.outfile.write(str(regs[j]) + "\t")
+            if j % 8 == 7:
+                self.outfile.write(str(regs[j]) + "\n")
+        self.outfile.write("\n")
+        self.outfile.write("data:" + "\n")
+
+        line = 32
+        if not data:
+            return
+        k = addr[-1] + 4
+        for j in range(len(data)):
+            if j % 8 == 0:
+                self.outfile.write(str(k) + ":\t")
+                k += line
+            if j % 8 != 7:
+                self.outfile.write(str(data[j]) + "\t")
+            if j % 8 == 7:
+                self.outfile.write(str(data[j]) + "\n")
 
 
 class Disassembler:
