@@ -81,7 +81,8 @@ class Simulator:
                 regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
 
             elif 160 <= int(opcode[i], base=2) <= 191:  # B
-                self.print_lists(i, cycleCount)
+                #self.print_lists(i, cycleCount)
+                self.out_sim_to_file(i, cycleCount)
                 i = i + arg1[i]
                 cycleCount += 1
                 continue
@@ -94,14 +95,16 @@ class Simulator:
 
             elif 1440 <= int(opcode[i], base=2) <= 1447:  # CBZ
                 if regs[arg3[i]] == 0:
-                    self.print_lists(i, cycleCount)
+                    #self.print_lists(i, cycleCount)
+                    self.out_sim_to_file(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
                     continue
 
             elif 1448 <= int(opcode[i], base=2) <= 1455:  # CBNZ
                 if regs[arg3[i]] != 0:
-                    self.print_lists(i, cycleCount)
+                    #self.print_lists(i, cycleCount)
+                    self.out_sim_to_file(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
                     continue
