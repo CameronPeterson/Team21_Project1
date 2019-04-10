@@ -104,7 +104,6 @@ class Simulator:
 
             elif int(opcode[i], base=2) == 1986:  # LDUR
                 regs[arg3[i]] = data[arg2[i] - offset]
-                print(data[arg2[i] - offset])
 
             elif int(opcode[i], base=2) == 1984:  # STUR
                 while len(data) < arg2[i]:
