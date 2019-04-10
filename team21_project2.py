@@ -1,18 +1,3 @@
-# TODO: Direct Simulator output to file
-# TODO: Figure out what LaKomski wants us to do with data output. See block comment below.
-
-# When consulting the team0TEST2_out_sim.txt file to compare outputs, I've determined that either:
-#     1) I don't understand how STUR works, or
-#     2) the output of the aforementioned file is incorrect.
-# In particualr, I'm referring to "cycle: 18" in LaKomski's output. Why is it that the value in R12 to be stored in
-# [R12, #40] is reflected as being stored in memory location 345? Shouldn't it be 347?
-# Additionally, I'm guessing that he's deriving the data addresses from the name of the register where the data is
-# being stored (R12 ---> 212). However, I'm uncertain about the origins of the leading '2'. Is it arbitrary?
-# You may have also noticed that the data registers are displayed throughout execution in test9_out_sim.txt,
-# whereas in team0TEST2_out_sim.txt they are only displayed after the first STUR instruction.
-
-# TODO: Once the above issues are resolved, change 'MEMLOC' to reflect appropriate registers in print_lists()
-
 import sys
 import os
 
@@ -55,10 +40,10 @@ twosMask = 0x80000000
 
 class Simulator:
 
-    def __init__(self):
+    def __init__(self, inFile, outFile):
 
-        self.input_file_name = sys.argv[3]
-        self.output_file_name = sys.argv[5]
+        self.input_file_name = inFile
+        self.output_file_name = outFile
         self.input_file = open(str(self.input_file_name))
         self.outfile = open(self.output_file_name + "_sim.txt", 'w')
         self.simulate_regs()
@@ -67,6 +52,7 @@ class Simulator:
 
         cycleCount = 1
         i = 0
+
         while i < (len(opcode)):
             if int(opcode[i], base=2) == 1112:  # ADD
                 regs[arg3[i]] = regs[arg1[i]] + regs[arg2[i]]
@@ -117,12 +103,18 @@ class Simulator:
                 regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
 
             elif int(opcode[i], base=2) == 1986:  # LDUR
-                regs[arg3[i]] = data[arg2[i] - 1]
+                regs[arg3[i]] = data[arg2[i] - offset]
+                print(data[arg2[i] - offset])
 
             elif int(opcode[i], base=2) == 1984:  # STUR
                 while len(data) < arg2[i]:
                     data.extend(dataExt)
-                data[arg2[i] - 1] = regs[arg3[i]]
+
+
+                base = regs[arg3[i]]
+                offset = ((addr[-1] + 4) - base)/4
+
+                data[arg2[i] - offset] = regs[arg3[i]]
 
             elif int(opcode[i], base=2) == 1872:  # EOR
                 regs[arg3[i]] = regs[arg1[i]] ^ regs[arg2[i]]
@@ -136,9 +128,9 @@ class Simulator:
             elif int(opcode[i], base=2) == 1692:  # ASR
                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
 
-            # elif int(opcode[i], base=2) == 0:         #NOP
+            #elif int(opcode[i], base=2) == 0:         #NOP
 
-            # elif int(opcode[i], base=2) == 2038:      #BREAK
+            #elif int(opcode[i], base=2) == 2038:      #BREAK
 
             #Use this for debugging
             #self.print_lists(i, cycleCount)
@@ -174,8 +166,10 @@ class Simulator:
                 print ("\n"),
 
     def out_sim_to_file(self, i, cycleCount):
-        self.outfile.write("====================\n")
-        self.outfile.write("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + "\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+        self.outfile.write("=====================\n")
+        self.outfile.write("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]))
+        if arg1Str[i] != "" or arg2Str[i] != "":
+            self.outfile.write("\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
         self.outfile.write("\n\n")
         self.outfile.write("registers:\n")
         for j in range(32):
@@ -186,7 +180,10 @@ class Simulator:
             if j % 8 == 7:
                 self.outfile.write(str(regs[j]) + "\n")
         self.outfile.write("\n")
-        self.outfile.write("data:" + "\n")
+        if not data:
+            self.outfile.write("data:" + "\n\n\n")
+        else:
+            self.outfile.write("data:" + "\n")
 
         line = 32
         if not data:
@@ -194,7 +191,7 @@ class Simulator:
         k = addr[-1] + 4
         for j in range(len(data)):
             if j % 8 == 0:
-                self.outfile.write(str(k) + ":\t")
+                self.outfile.write(str(k) + ":")
                 k += line
             if j % 8 != 7:
                 self.outfile.write(str(data[j]) + "\t")
@@ -205,12 +202,13 @@ class Simulator:
 class Disassembler:
     # Constructor sets up dummy values, gets I/O files, adds and processes input, and prints disassembled code
     def __init__(self):
-        self.input_file_name = 'test1_bin.txt'
-        self.output_file_name = 'OUTTEST'
+        self.input_file_name = ''
+        self.output_file_name = ''
         self.get_io_params()
         self.input_file = open(str(self.input_file_name))
         self.input_to_lists()
         self.print_lists()
+        Simulator(self.input_file_name, self.output_file_name)
 
     # get_io_params() sets input_file_name and output_file_name to the string values immediately after the -i and -o args
     # It also prints the names of the I/O files
@@ -487,4 +485,3 @@ class Disassembler:
 
 if __name__ == "__main__":  # Only runs if program executed as script
     disassembler = Disassembler()
-    simulator = Simulator()
