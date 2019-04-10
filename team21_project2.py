@@ -1,17 +1,17 @@
-#TODO: Direct Simulator output to file
-#TODO: Figure out what LaKomski wants us to do with data output. See block comment below.
+# TODO: Direct Simulator output to file
+# TODO: Figure out what LaKomski wants us to do with data output. See block comment below.
 
-    # When consulting the team0TEST2_out_sim.txt file to compare outputs, I've determined that either:
-    #     1) I don't understand how STUR works, or
-    #     2) the output of the aforementioned file is incorrect.
-    # In particualr, I'm referring to "cycle: 18" in LaKomski's output. Why is it that the value in R12 to be stored in
-    # [R12, #40] is reflected as being stored in memory location 345? Shouldn't it be 347?
-    # Additionally, I'm guessing that he's deriving the data addresses from the name of the register where the data is
-    # being stored (R12 ---> 212). However, I'm uncertain about the origins of the leading '2'. Is it arbitrary?
-    # You may have also noticed that the data registers are displayed throughout execution in test9_out_sim.txt,
-    # whereas in team0TEST2_out_sim.txt they are only displayed after the first STUR instruction.
+# When consulting the team0TEST2_out_sim.txt file to compare outputs, I've determined that either:
+#     1) I don't understand how STUR works, or
+#     2) the output of the aforementioned file is incorrect.
+# In particualr, I'm referring to "cycle: 18" in LaKomski's output. Why is it that the value in R12 to be stored in
+# [R12, #40] is reflected as being stored in memory location 345? Shouldn't it be 347?
+# Additionally, I'm guessing that he's deriving the data addresses from the name of the register where the data is
+# being stored (R12 ---> 212). However, I'm uncertain about the origins of the leading '2'. Is it arbitrary?
+# You may have also noticed that the data registers are displayed throughout execution in test9_out_sim.txt,
+# whereas in team0TEST2_out_sim.txt they are only displayed after the first STUR instruction.
 
-#TODO: Once the above issues are resolved, change 'MEMLOC' to reflect appropriate registers in print_lists()
+# TODO: Once the above issues are resolved, change 'MEMLOC' to reflect appropriate registers in print_lists()
 
 import sys
 import os
@@ -36,6 +36,7 @@ regs[:32] = [0] * 32
 data = []
 dataExt = []
 dataExt[:8] = [0] * 8
+dataAddr = []
 
 # Masks used in parsing machine code strings
 rnMask = 0x3E0
@@ -51,6 +52,7 @@ brMask = 0x3FFFFFF
 brkMask = 0x1FFFFF
 twosMask = 0x80000000
 
+
 class Simulator:
 
     def __init__(self):
@@ -65,74 +67,74 @@ class Simulator:
         cycleCount = 1
         i = 0
         while i < (len(opcode)):
-            if int(opcode[i], base=2) == 1112:          #ADD
+            if int(opcode[i], base=2) == 1112:  # ADD
                 regs[arg3[i]] = regs[arg1[i]] + regs[arg2[i]]
 
-            elif int(opcode[i], base=2) == 1624:        #SUB
+            elif int(opcode[i], base=2) == 1624:  # SUB
                 regs[arg3[i]] = regs[arg1[i]] - regs[arg2[i]]
-            
-            elif int(opcode[i], base=2) == 1104:        #AND
+
+            elif int(opcode[i], base=2) == 1104:  # AND
                 regs[arg3[i]] = regs[arg1[i]] & regs[arg2[i]]
-            
-            elif int(opcode[i], base=2) == 1360:        #ORR
+
+            elif int(opcode[i], base=2) == 1360:  # ORR
                 regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
 
-            elif 160 <= int(opcode[i], base=2) <= 191:  #B
+            elif 160 <= int(opcode[i], base=2) <= 191:  # B
                 self.print_lists(i, cycleCount)
                 i = i + arg1[i]
                 cycleCount += 1
                 continue
 
-            elif int(opcode[i], base=2) in (1160, 1161):#ADDI
+            elif int(opcode[i], base=2) in (1160, 1161):  # ADDI
                 regs[arg3[i]] = regs[arg1[i]] + arg2[i]
 
-            elif int(opcode[i], base=2) in (1672, 1673):#SUBI
+            elif int(opcode[i], base=2) in (1672, 1673):  # SUBI
                 regs[arg3[i]] = regs[arg1[i]] - arg2[i]
 
-            elif 1440 <= int(opcode[i], base=2) <= 1447:#CBZ
+            elif 1440 <= int(opcode[i], base=2) <= 1447:  # CBZ
                 if regs[arg3[i]] == 0:
                     self.print_lists(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
                     continue
 
-            elif 1448 <= int(opcode[i], base=2) <= 1455:#CBNZ
+            elif 1448 <= int(opcode[i], base=2) <= 1455:  # CBNZ
                 if regs[arg3[i]] != 0:
                     self.print_lists(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
                     continue
-            
-            elif 1684 <= int(opcode[i], base=2) <= 1687:#MOVZ
+
+            elif 1684 <= int(opcode[i], base=2) <= 1687:  # MOVZ
                 regs[arg3[i]] = 0
                 regs[arg3[i]] = arg1[i] << arg2[i]
-            
-            elif 1940 <= int(opcode[i], base=2) <= 1943:#MOVK
-                regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
-            
-            elif int(opcode[i], base=2) == 1986:        #LDUR
-                regs[arg3[i]] = data[arg2[i]-1]
 
-            elif int(opcode[i], base=2) == 1984:        #STUR
+            elif 1940 <= int(opcode[i], base=2) <= 1943:  # MOVK
+                regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
+
+            elif int(opcode[i], base=2) == 1986:  # LDUR
+                regs[arg3[i]] = data[arg2[i] - 1]
+
+            elif int(opcode[i], base=2) == 1984:  # STUR
                 while len(data) < arg2[i]:
                     data.extend(dataExt)
-                data[arg2[i]-1] = regs[arg3[i]]
-            
-            elif int(opcode[i], base=2) == 1872:        #EOR
+                data[arg2[i] - 1] = regs[arg3[i]]
+
+            elif int(opcode[i], base=2) == 1872:  # EOR
                 regs[arg3[i]] = regs[arg1[i]] ^ regs[arg2[i]]
-            
-            elif int(opcode[i], base=2) == 1690:        #LSR
+
+            elif int(opcode[i], base=2) == 1690:  # LSR
                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
 
-            elif int(opcode[i], base=2) == 1691:        #LSL
+            elif int(opcode[i], base=2) == 1691:  # LSL
                 regs[arg3[i]] = regs[arg1[i]] << arg2[i]
 
-            elif int(opcode[i], base=2) == 1692:        #ASR
+            elif int(opcode[i], base=2) == 1692:  # ASR
                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
 
-            #elif int(opcode[i], base=2) == 0:         #NOP
+            # elif int(opcode[i], base=2) == 0:         #NOP
 
-            #elif int(opcode[i], base=2) == 2038:      #BREAK
+            # elif int(opcode[i], base=2) == 2038:      #BREAK
 
             self.print_lists(i, cycleCount)
             cycleCount += 1
@@ -140,7 +142,8 @@ class Simulator:
 
     def print_lists(self, i, cycleCount):
         print ("====================\n")
-        print ("cycle:" + str(cycleCount)) + " " + str(addr[i]) + " " + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[i] + arg3Str[i]
+        print ("cycle:" + str(cycleCount)) + " " + str(addr[i]) + " " + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[
+            i] + arg3Str[i]
         print ("\n")
         print ("registers:\n")
         for j in range(32):
@@ -152,9 +155,14 @@ class Simulator:
         print ("\n"),
         print ("data:")
 
+        line = 32
+        if not data:
+            return
+        k = addr[-1] + 4
         for j in range(len(data)):
             if j % 8 == 0:
-                print "MEMLOC:\t",
+                print str(k) + ":\t",
+                k += line
             print str(data[j]) + "\t",
             if j % 8 == 7:
                 print ("\n"),
@@ -372,7 +380,7 @@ class Disassembler:
             addr.append(addrBase)
             addrBase += 4
 
-    #returns 2s complement of bin
+    # returns 2s complement of bin
     def unsigned2signed(self, bin, bitNum):
         if ((twosMask >> (32 - bitNum) & (int(bin)))) == (twosMask >> (32 - bitNum)):
             return int(bin) - (1 << bitNum)
@@ -441,6 +449,7 @@ class Disassembler:
         spacedStr = bin[0:8] + " " + bin[8:11] + " " + bin[11:16] + " " + bin[16:21] + " " + bin[21:26] + " " + bin[
                                                                                                                 26:32]
         return spacedStr
+
 
 if __name__ == "__main__":  # Only runs if program executed as script
     disassembler = Disassembler()
