@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from Queue import Queue
 import os
 
@@ -44,6 +45,11 @@ PreIssueBuffer = Queue(maxsize=4)
 PostALUBuffer = 0
 PostMEMBuffer = 0
 
+#Cache components
+hash = {}
+item_list = []
+
+cache = None
 
 class WriteBackUnit:
     def run(self):
@@ -67,6 +73,7 @@ class MEMUnit:
 class IssueUnit:
     def run(self):
         for x in list(PreIssueBuffer.queue):
+
             print (x)
 
 
@@ -76,73 +83,82 @@ class InstrFetch:
     def __init__(self):
         self.i = 0
 
-    def run(self):
+    def run(self, cache):
         PreIssueBuffer.put(opcode_str[self.i])
         PreIssueBuffer.put(opcode_str[self.i + 1])
+        a = LRUCacheItem(1, raw_instruction[self.i])
+        b = LRUCacheItem(2, raw_instruction[self.i+1])
+        cache.insertItem(a)
+        cache.insertItem(b)
         self.i += 2
-        return True
 
+        return False
+
+class LRUCacheItem(object):
+    """Data structure of items stored in cache"""
+    def __init__(self, key, item):
+        self.key = key
+        self.item = item
+        self.timestamp = datetime.now()
 
 class Cache:
-    def __init__(self):
-        self.LRUBits = []
-        self.ValidBits = []
-        self.DirtyBits = []
-        self.Tag = []
-        self.Data = []
-        self.LRUBits[:4] = [0] * 4
-        self.ValidBits[:8] = [0] * 8
-        self.DirtyBits[:8] = [0] * 8
-        self.Tag[:8] = [0] * 8
-        self.Data[:8] = [0] * 8
-        # cache = [self.LRUBits, self.ValidBits, self.DirtyBits, self.Tag, self.Data]
+    # def __init__(self):
+    #     self.LRUBits = []
+    #     self.ValidBits = []
+    #     self.DirtyBits = []
+    #     self.Tag = []
+    #     self.Data = []
+    #     self.LRUBits[:4] = [0] * 4
+    #     self.ValidBits[:8] = [0] * 8
+    #     self.DirtyBits[:8] = [0] * 8
+    #     self.Tag[:8] = [0] * 8
+    #     self.Data[:8] = [0] * 8
+    #     cache = [self.LRUBits, self.ValidBits, self.DirtyBits, self.Tag, self.Data]
 
     def run(self):
         pass
 
     """A sample class that implements LRU algorithm"""
 
-    # def __init__(self, length, delta=None):
-    #     self.length = length
-    #     self.delta = delta
-    #     self.hash = {}
-    #     self.item_list = []
-    #
-    # def insertItem(self, item):
-    #     """Insert new items to cache"""
-    #
-    #     if item.key in self.hash:
-    #         # Move the existing item to the head of item_list.
-    #         item_index = self.item_list.index(item)
-    #         self.item_list[:] = self.item_list[:item_index] + self.item_list[item_index + 1:]
-    #         self.item_list.insert(0, item)
-    #     else:
-    #         # Remove the last item if the length of cache exceeds the upper bound.
-    #         if len(self.item_list) > self.length:
-    #             self.removeItem(self.item_list[-1])
-    #
-    #         # If this is a new item, just append it to
-    #         # the front of item_list.
-    #         self.hash[item.key] = item
-    #         self.item_list.insert(0, item)
-    #
-    # def removeItem(self, item):
-    #     """Remove those invalid items"""
-    #
-    #     del self.hash[item.key]
-    #     del self.item_list[self.item_list.index(item)]
-    #
-    # def validateItem(self):
-    #     """Check if the items are still valid."""
-    #
-    #     def _outdated_items():
-    #         now = datetime.now()
-    #         for item in self.item_list:
-    #             time_delta = now - item.timestamp
-    #             if time_delta.seconds > self.delta:
-    #                 yield item
-    #
-    #     map(lambda x: self.removeItem(x), _outdated_items())
+    def __init__(self, length, delta=None):
+        self.length = length
+        self.delta = delta
+
+    def insertItem(self, item):
+        """Insert new items to cache"""
+
+        if item.key in hash:
+            # Move the existing item to the head of item_list.
+            item_index = item_list.index(item)
+            item_list[:] = item_list[:item_index] + item_list[item_index + 1:]
+            item_list.insert(0, item)
+        else:
+            # Remove the last item if the length of cache exceeds the upper bound.
+            if len(item_list) > self.length:
+                self.removeItem(item_list[-1])
+
+            # If this is a new item, just append it to
+            # the front of item_list.
+            hash[item.key] = item
+            item_list.insert(0, item)
+
+    def removeItem(self, item):
+        """Remove those invalid items"""
+
+        del hash[item.key]
+        del item_list[item_list.index(item)]
+
+    def validateItem(self):
+        """Check if the items are still valid."""
+
+        def _outdated_items():
+            now = datetime.now()
+            for item in item_list:
+                time_delta = now - item.timestamp
+                if time_delta.seconds > self.delta:
+                    yield item
+
+        map(lambda x: self.removeItem(x), _outdated_items())
 
 
 class Processor:
@@ -159,12 +175,12 @@ class Processor:
         self.src1Reg = src1
         self.src2Reg = src2
         self.cycle = 0
-        self.WB = WriteBackUnit();
-        self.ALU = ALUnit();
-        self.MEM = MEMUnit();
-        self.issue = IssueUnit();
-        self.fetch = InstrFetch();
-        self.cache = Cache();
+        self.WB = WriteBackUnit()
+        self.ALU = ALUnit()
+        self.MEM = MEMUnit()
+        self.issue = IssueUnit()
+        self.fetch = InstrFetch()
+        self.cache = Cache(length=8, delta=5)
 
         self.run()
 
@@ -172,13 +188,15 @@ class Processor:
         # jury-rigging. This goes away following further project implementation
         self.cycle = self.numInstructions + 4
 
+
+
         go = True
         while go:
             self.WB.run()
             self.ALU.run()
             self.MEM.run()
             self.issue.run()
-            go = self.fetch.run()
+            go = self.fetch.run(self.cache)
             self.printState()  # prints everything/ should only print once per cycle
             self.cycle += 1
 
@@ -188,7 +206,11 @@ class Processor:
             print ("Cycle: " + str(i + 1))
             print ("Pre-Issue Buffer:")
             for j in range(4):
-                print ("\tEntry " + str(j) + ":")
+                print ("\tEntry " + str(j) + ":\t"),
+                if j < PreIssueBuffer.qsize():
+                    print (opcode_str[j] + " " + arg1Str[j] + arg2Str[j] + arg3Str[j])
+                else:
+                    print ("\t\n")
             print ("Pre_ALU Queue:")
             for j in range(2):
                 print ("\tEntry " + str(j) + ":")
@@ -208,9 +230,14 @@ class Processor:
                     print ("\n"),
             print ("\nCache")
             for j in range(4):
-                print ("Set " + str(j) + ":LRU=" + str(self.cache.LRUBits[j]))
+                print ("Set " + str(j) + ":LRU="),
                 for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
-                    print ("\tEntry " + str(k) + ":[(" + str(self.cache.ValidBits[k]) + "," + str(self.cache.DirtyBits[k]) + "," + str(self.cache.Tag[k]) + ")<" + "," + ">]")
+                    print ("\tEntry " + str(k) + ":[(" + "0" + "," + "0" + "," + "0" + ")<")
+                for i,item in enumerate(item_list):
+                    if item:
+                        print (item.item)
+                    print (",")
+                print (">]")
             print ("\nData")
 
 

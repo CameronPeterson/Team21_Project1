@@ -40,6 +40,30 @@ twosMask = 0x80000000
 
 class Simulator:
 
+    def __init__(self, instrs, opcodes, mem, valids, addrs, args1, args2, args3, numInstrs, dest, src1, src2):
+        self.instruction = instrs
+        self.opcode = opcodes
+        self.memory = mem
+        self.address = addrs
+        self.numInstructions = numInstrs
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = arg3
+        self.destReg = dest
+        self.src1Reg = src1
+        self.src2Reg = src2
+
+    def run(self):
+        go = True
+        while go:
+            self.WB.run
+            self.ALU.run
+            self.MEM.run
+            self.issue.run
+            go = self.fetch.run
+            self.printState()
+            self.cycle += 1
+
     def __init__(self, inFile, outFile):
 
         self.input_file_name = inFile
