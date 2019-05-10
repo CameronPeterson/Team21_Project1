@@ -1,4 +1,5 @@
 import sys
+from Queue import Queue
 import os
 
 # All globals directly below are lists containing elements that are associated by an index.
@@ -37,6 +38,112 @@ brMask = 0x3FFFFFF
 brkMask = 0x1FFFFF
 twosMask = 0x80000000
 
+PreALUQueue = Queue(maxsize=2)
+PreMEMQueue = Queue(maxsize=2)
+PreIssueBuffer = Queue(maxsize=4)
+PostALUBuffer = 0
+PostMEMBuffer = 0
+
+
+class WriteBackUnit:
+    def run(self):
+        if PostALUBuffer == 0 & PostMEMBuffer == 0:
+            return
+
+
+class ALUnit:
+    def run(self):
+        if not PreALUQueue:
+            return
+        return
+
+
+class MEMUnit:
+    def run(self):
+        if not PreMEMQueue:
+            return
+
+
+class IssueUnit:
+    def run(self):
+        for x in list(PreIssueBuffer.queue):
+            print (x)
+
+
+class InstrFetch:
+    # eventually needs to fetch from cache
+    # getting instruction directly from instruction list for now
+    def __init__(self):
+        self.i = 0
+
+    def run(self):
+        PreIssueBuffer.put(opcode_str[self.i])
+        PreIssueBuffer.put(opcode_str[self.i + 1])
+        self.i += 2
+        return True
+
+
+class Cache:
+    def __init__(self):
+        self.LRUBits = []
+        self.ValidBits = []
+        self.DirtyBits = []
+        self.Tag = []
+        self.Data = []
+        self.LRUBits[:4] = [0] * 4
+        self.ValidBits[:8] = [0] * 8
+        self.DirtyBits[:8] = [0] * 8
+        self.Tag[:8] = [0] * 8
+        self.Data[:8] = [0] * 8
+        # cache = [self.LRUBits, self.ValidBits, self.DirtyBits, self.Tag, self.Data]
+
+    def run(self):
+        pass
+
+    """A sample class that implements LRU algorithm"""
+
+    # def __init__(self, length, delta=None):
+    #     self.length = length
+    #     self.delta = delta
+    #     self.hash = {}
+    #     self.item_list = []
+    #
+    # def insertItem(self, item):
+    #     """Insert new items to cache"""
+    #
+    #     if item.key in self.hash:
+    #         # Move the existing item to the head of item_list.
+    #         item_index = self.item_list.index(item)
+    #         self.item_list[:] = self.item_list[:item_index] + self.item_list[item_index + 1:]
+    #         self.item_list.insert(0, item)
+    #     else:
+    #         # Remove the last item if the length of cache exceeds the upper bound.
+    #         if len(self.item_list) > self.length:
+    #             self.removeItem(self.item_list[-1])
+    #
+    #         # If this is a new item, just append it to
+    #         # the front of item_list.
+    #         self.hash[item.key] = item
+    #         self.item_list.insert(0, item)
+    #
+    # def removeItem(self, item):
+    #     """Remove those invalid items"""
+    #
+    #     del self.hash[item.key]
+    #     del self.item_list[self.item_list.index(item)]
+    #
+    # def validateItem(self):
+    #     """Check if the items are still valid."""
+    #
+    #     def _outdated_items():
+    #         now = datetime.now()
+    #         for item in self.item_list:
+    #             time_delta = now - item.timestamp
+    #             if time_delta.seconds > self.delta:
+    #                 yield item
+    #
+    #     map(lambda x: self.removeItem(x), _outdated_items())
+
 
 class Processor:
     def __init__(self, instrs, opcodes, mem, valids, addrs, args1, args2, args3, numInstrs, dest, src1, src2):
@@ -52,28 +159,33 @@ class Processor:
         self.src1Reg = src1
         self.src2Reg = src2
         self.cycle = 0
+        self.WB = WriteBackUnit();
+        self.ALU = ALUnit();
+        self.MEM = MEMUnit();
+        self.issue = IssueUnit();
+        self.fetch = InstrFetch();
+        self.cache = Cache();
 
         self.run()
-        self.printlists()
 
     def run(self):
-        #jury-rigging. This goes away following further project implementation
+        # jury-rigging. This goes away following further project implementation
         self.cycle = self.numInstructions + 4
 
-        # go = True
-        # while go:
-        #     self.WB.run()
-        #     self.ALU.run()
-        #     self.MEM.run()
-        #     self.issue.run()
-        #     go = self.fetch.run()
-        #     self.printState()
-        #     self.cycle += 1
+        go = True
+        while go:
+            self.WB.run()
+            self.ALU.run()
+            self.MEM.run()
+            self.issue.run()
+            go = self.fetch.run()
+            self.printState()  # prints everything/ should only print once per cycle
+            self.cycle += 1
 
-    def printlists(self):
+    def printState(self):
         for i in range(self.cycle):
             print ("--------------------")
-            print ("Cycle: " + str(i+1))
+            print ("Cycle: " + str(i + 1))
             print ("Pre-Issue Buffer:")
             for j in range(4):
                 print ("\tEntry " + str(j) + ":")
@@ -96,10 +208,11 @@ class Processor:
                     print ("\n"),
             print ("\nCache")
             for j in range(4):
-                print ("Set " + str(j) + ":")
-                for k in range(2):
-                    print ("\tEntry " + str(k) + ":")
+                print ("Set " + str(j) + ":LRU=" + str(self.cache.LRUBits[j]))
+                for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
+                    print ("\tEntry " + str(k) + ":[(" + str(self.cache.ValidBits[k]) + "," + str(self.cache.DirtyBits[k]) + "," + str(self.cache.Tag[k]) + ")<" + "," + ">]")
             print ("\nData")
+
 
 class Simulator:
 
@@ -110,8 +223,6 @@ class Simulator:
         self.input_file = open(str(self.input_file_name))
         self.outfile = open(self.output_file_name + "_sim.txt", 'w')
         self.simulate_regs()
-
-
 
     def simulate_regs(self):
 
@@ -132,7 +243,7 @@ class Simulator:
                 regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
 
             elif 160 <= int(opcode[i], base=2) <= 191:  # B
-                #self.print_lists(i, cycleCount)
+                # self.print_lists(i, cycleCount)
                 self.out_sim_to_file(i, cycleCount)
                 i = i + arg1[i]
                 cycleCount += 1
@@ -146,7 +257,7 @@ class Simulator:
 
             elif 1440 <= int(opcode[i], base=2) <= 1447:  # CBZ
                 if regs[arg3[i]] == 0:
-                    #self.print_lists(i, cycleCount)
+                    # self.print_lists(i, cycleCount)
                     self.out_sim_to_file(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
@@ -154,7 +265,7 @@ class Simulator:
 
             elif 1448 <= int(opcode[i], base=2) <= 1455:  # CBNZ
                 if regs[arg3[i]] != 0:
-                    #self.print_lists(i, cycleCount)
+                    # self.print_lists(i, cycleCount)
                     self.out_sim_to_file(i, cycleCount)
                     i = i + arg1[i]
                     cycleCount += 1
@@ -174,9 +285,8 @@ class Simulator:
                 while len(data) < arg2[i]:
                     data.extend(dataExt)
 
-
                 base = regs[arg3[i]]
-                offset = ((addr[-1] + 4) - base)/4
+                offset = ((addr[-1] + 4) - base) / 4
 
                 data[arg2[i] - offset] = regs[arg3[i]]
 
@@ -192,23 +302,23 @@ class Simulator:
             elif int(opcode[i], base=2) == 1692:  # ASR
                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
 
-            #elif int(opcode[i], base=2) == 0:         #NOP
+            # elif int(opcode[i], base=2) == 0:         #NOP
 
-            #elif int(opcode[i], base=2) == 2038:      #BREAK
+            # elif int(opcode[i], base=2) == 2038:      #BREAK
 
-            #Use this for debugging
-            #self.print_lists(i, cycleCount)
+            # Use this for debugging
+            # self.print_lists(i, cycleCount)
 
-
-            #Commented out because simulator output file no longer needed for assignment
-            #self.out_sim_to_file(i, cycleCount)
+            # Commented out because simulator output file no longer needed for assignment
+            # self.out_sim_to_file(i, cycleCount)
             cycleCount += 1
             i += 1
 
     def print_lists(self, i, cycleCount):
         print ("====================\n")
-        print ("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + " " + arg1Str[i] + arg2Str[
-            i] + arg3Str[i])
+        print ("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + " " + arg1Str[i] +
+               arg2Str[
+                   i] + arg3Str[i])
         print ("\n")
         print ("registers:\n")
         for j in range(32):
