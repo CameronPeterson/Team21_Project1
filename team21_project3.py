@@ -42,8 +42,8 @@ twosMask = 0x80000000
 PreALUQueue = Queue(maxsize=2)
 PreMEMQueue = Queue(maxsize=2)
 PreIssueBuffer = Queue(maxsize=4)
-PostALUBuffer = 0
-PostMEMBuffer = 0
+PostALUBuffer = "empty"
+PostMEMBuffer = "empty"
 
 #Cache components
 hash = {}
@@ -51,32 +51,50 @@ item_list = []
 
 cache = None
 
-#GITHUB TEST
-
 class WriteBackUnit:
     def run(self):
-        if PostALUBuffer == 0 & PostMEMBuffer == 0:
-            return
+        print ("INSIDE WriteBackUnit")
+        print ("Writing back " + PostALUBuffer + " and " + PostMEMBuffer)
 
 
 class ALUnit:
     def run(self):
-        if not PreALUQueue:
-            return
-        return
+        global PostALUBuffer
+        inst = PreALUQueue.get()
+        print ("INSIDE ALUnit")
+        print ("ALU fetched " + inst)
+        PostALUBuffer = inst
 
 
 class MEMUnit:
     def run(self):
-        if not PreMEMQueue:
-            return
+        global PostMEMBuffer
+        print ("INSIDE MEMUnit")
+        if not PreMEMQueue.empty():
+            PostMEMBuffer = PreMEMQueue.get()
+            print ("MEM now contains " + PostMEMBuffer)
+        else:
+            print ("No PreMEM")
 
 
 class IssueUnit:
     def run(self):
-        for x in list(PreIssueBuffer.queue):
-
-            print (x)
+        inst1 = PreIssueBuffer.get()
+        inst2 = PreIssueBuffer.get()
+        print ("INSIDE IssueUnit")
+        print ("IssueUnit contains " + inst1 + " and " + inst2)
+        if inst1 in ("LDUR", "STUR", "B", "CBZ", "CBNZ"):
+            PreMEMQueue.put(inst1)
+            print ("inst1 to PreMEMQueue")
+        else:
+            PreALUQueue.put(inst1)
+            print ("inst1 to PreALUQueue")
+        if inst2 in ("LDUR", "STUR", "B", "CBZ", "CBNZ"):
+            PreMEMQueue.put(inst2)
+            print ("inst2 to PreMEMQueue")
+        else:
+            PreALUQueue.put(inst2)
+            print ("inst2 to PreALUQueue")
 
 
 class InstrFetch:
@@ -86,12 +104,19 @@ class InstrFetch:
         self.i = 0
 
     def run(self, cache):
+        print ("INSIDE InstrFetch")
+        print ("Fetching " + opcode_str[self.i] + " and " + opcode_str[self.i + 1])
+        print ("and sending them to PreIssueBuffer")
         PreIssueBuffer.put(opcode_str[self.i])
         PreIssueBuffer.put(opcode_str[self.i + 1])
-        a = LRUCacheItem(1, raw_instruction[self.i])
-        b = LRUCacheItem(2, raw_instruction[self.i+1])
-        cache.insertItem(a)
-        cache.insertItem(b)
+
+        print ("PreIssueBuffer now contains ")
+        for x in list(PreIssueBuffer.queue):
+            print (x)
+        # a = LRUCacheItem(1, raw_instruction[self.i])
+        # b = LRUCacheItem(2, raw_instruction[self.i+1])
+        # cache.insertItem(a)
+        # cache.insertItem(b)
         self.i += 2
 
         return False
@@ -187,60 +212,68 @@ class Processor:
         self.run()
 
     def run(self):
-        # jury-rigging. This goes away following further project implementation
-        self.cycle = self.numInstructions + 4
-
-
-
-        go = True
+        go = True;
         while go:
-            self.WB.run()
+            go = self.fetch.run(self.cache)
+            self.issue.run()
             self.ALU.run()
             self.MEM.run()
-            self.issue.run()
-            go = self.fetch.run(self.cache)
-            self.printState()  # prints everything/ should only print once per cycle
+            self.WB.run()
             self.cycle += 1
+    #     # jury-rigging. This goes away following further project implementation
+    #     self.cycle = self.numInstructions + 4
+    #
+    #
+    #
+    #     go = True
+    #     while go:
+    #         self.WB.run()
+    #         self.ALU.run()
+    #         self.MEM.run()
+    #         self.issue.run()
+    #         go = self.fetch.run(self.cache)
+    # #       self.printState()  # prints everything/ should only print once per cycle
+    #         self.cycle += 1
 
-    def printState(self):
-        for i in range(self.cycle):
-            print ("--------------------")
-            print ("Cycle: " + str(i + 1))
-            print ("Pre-Issue Buffer:")
-            for j in range(4):
-                print ("\tEntry " + str(j) + ":\t"),
-                if j < PreIssueBuffer.qsize():
-                    print (opcode_str[j] + " " + arg1Str[j] + arg2Str[j] + arg3Str[j])
-                else:
-                    print ("\t\n")
-            print ("Pre_ALU Queue:")
-            for j in range(2):
-                print ("\tEntry " + str(j) + ":")
-            print ("Post_ALU Queue:")
-            print ("\tEntry 0:")
-            print ("Pre_MEM Queue:")
-            for j in range(2):
-                print ("\tEntry " + str(j) + ":")
-            print ("Post_MEM Queue:")
-            print ("\tEntry 0:")
-            print ("Registers")
-            for j in range(32):
-                if j % 8 == 0:
-                    print "R" + str(j).zfill(2) + ":\t",
-                print str(regs[j]) + "\t",
-                if j % 8 == 7:
-                    print ("\n"),
-            print ("\nCache")
-            for j in range(4):
-                print ("Set " + str(j) + ":LRU="),
-                for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
-                    print ("\tEntry " + str(k) + ":[(" + "0" + "," + "0" + "," + "0" + ")<")
-                for i,item in enumerate(item_list):
-                    if item:
-                        print (item.item)
-                    print (",")
-                print (">]")
-            print ("\nData")
+    # def printState(self):
+    #     for i in range(self.cycle):
+    #         print ("--------------------")
+    #         print ("Cycle: " + str(i + 1))
+    #         print ("Pre-Issue Buffer:")
+    #         for j in range(4):
+    #             print ("\tEntry " + str(j) + ":\t"),
+    #             if j < PreIssueBuffer.qsize():
+    #                 print (opcode_str[j] + " " + arg1Str[j] + arg2Str[j] + arg3Str[j])
+    #             else:
+    #                 print ("\t\n")
+    #         print ("Pre_ALU Queue:")
+    #         for j in range(2):
+    #             print ("\tEntry " + str(j) + ":")
+    #         print ("Post_ALU Queue:")
+    #         print ("\tEntry 0:")
+    #         print ("Pre_MEM Queue:")
+    #         for j in range(2):
+    #             print ("\tEntry " + str(j) + ":")
+    #         print ("Post_MEM Queue:")
+    #         print ("\tEntry 0:")
+    #         print ("Registers")
+    #         for j in range(32):
+    #             if j % 8 == 0:
+    #                 print "R" + str(j).zfill(2) + ":\t",
+    #             print str(regs[j]) + "\t",
+    #             if j % 8 == 7:
+    #                 print ("\n"),
+    #         print ("\nCache")
+    #         for j in range(4):
+    #             print ("Set " + str(j) + ":LRU="),
+    #             for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
+    #                 print ("\tEntry " + str(k) + ":[(" + "0" + "," + "0" + "," + "0" + ")<")
+    #             for i,item in enumerate(item_list):
+    #                 if item:
+    #                     print (item.item)
+    #                 print (",")
+    #             print (">]")
+    #         print ("\nData")
 
 
 class Simulator:
