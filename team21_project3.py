@@ -42,8 +42,8 @@ twosMask = 0x80000000
 PreALUQueue = Queue(maxsize=2)
 PreMEMQueue = Queue(maxsize=2)
 PreIssueBuffer = Queue(maxsize=4)
-PostALUBuffer = "empty"
-PostMEMBuffer = "empty"
+PostALUBuffer = None
+PostMEMBuffer = None
 
 #Cache components
 hash = {}
@@ -51,18 +51,88 @@ item_list = []
 
 cache = None
 
+
+def simulate_regs(inst):
+    arg1 = inst[1]
+    arg2 = inst[2]
+    arg3 = inst[3]
+    opcode = inst[4]
+    if int(opcode, base=2) == 1112:  # ADD
+        regs[arg3] = regs[arg1] + regs[arg2]
+
+    elif int(opcode, base=2) == 1624:  # SUB
+        regs[arg3] = regs[arg1] - regs[arg2]
+
+    elif int(opcode, base=2) == 1104:  # AND
+        regs[arg3] = regs[arg1] & regs[arg2]
+
+    elif int(opcode, base=2) == 1360:  # ORR
+        regs[arg3] = regs[arg1] | regs[arg2]
+
+    elif 160 <= int(opcode, base=2) <= 191:  # B
+        # special things must happen here
+        return
+
+    elif int(opcode, base=2) in (1160, 1161):  # ADDI
+        regs[arg3] = regs[arg1] + arg2
+
+    elif int(opcode, base=2) in (1672, 1673):  # SUBI
+        regs[arg3] = regs[arg1] - arg2
+
+    elif 1440 <= int(opcode, base=2) <= 1447:  # CBZ
+        if regs[arg3] == 0:
+            # more special things
+            return
+
+    elif 1448 <= int(opcode, base=2) <= 1455:  # CBNZ
+        if regs[arg3] != 0:
+            # more special things
+            return
+
+    elif 1684 <= int(opcode, base=2) <= 1687:  # MOVZ
+        regs[arg3] = 0
+        regs[arg3] = arg1 << arg2
+
+    elif 1940 <= int(opcode, base=2) <= 1943:  # MOVK
+        regs[arg3] = regs[arg3] + (arg1 << arg2)
+
+    #elif int(opcode, base=2) == 1986:  # LDUR
+        #regs[arg3] = data[arg2 - offset]
+        #more special things
+
+    elif int(opcode, base=2) == 1984:  # STUR
+        while len(data) < arg2:
+            data.extend(dataExt)
+
+        base = regs[arg3]
+        offset = ((addr[-1] + 4) - base) / 4
+
+        data[arg2 - offset] = regs[arg3]
+
+    elif int(opcode, base=2) == 1872:  # EOR
+        regs[arg3] = regs[arg1] ^ regs[arg2]
+
+    elif int(opcode, base=2) == 1690:  # LSR
+        regs[arg3] = regs[arg1] >> arg2
+
+    elif int(opcode, base=2) == 1691:  # LSL
+        regs[arg3] = regs[arg1] << arg2
+
+    elif int(opcode, base=2) == 1692:  # ASR
+        regs[arg3] = regs[arg1] >> arg2
+
 class WriteBackUnit:
     def run(self):
         print ("INSIDE WriteBackUnit")
-        print ("Writing back " + PostALUBuffer + " and " + PostMEMBuffer)
-
+        print ("Writing back " + str(PostALUBuffer) + " and " + str(PostMEMBuffer))
+        simulate_regs(PostALUBuffer)
 
 class ALUnit:
     def run(self):
         global PostALUBuffer
         inst = PreALUQueue.get()
         print ("INSIDE ALUnit")
-        print ("ALU fetched " + inst)
+        print ("ALU fetched " + str(inst))
         PostALUBuffer = inst
 
 
@@ -82,7 +152,7 @@ class IssueUnit:
         inst1 = PreIssueBuffer.get()
         inst2 = PreIssueBuffer.get()
         print ("INSIDE IssueUnit")
-        print ("IssueUnit contains " + inst1 + " and " + inst2)
+        print ("IssueUnit contains ") + str(inst1) + " and " + str(inst2)
         if inst1 in ("LDUR", "STUR", "B", "CBZ", "CBNZ"):
             PreMEMQueue.put(inst1)
             print ("inst1 to PreMEMQueue")
@@ -107,8 +177,8 @@ class InstrFetch:
         print ("INSIDE InstrFetch")
         print ("Fetching " + opcode_str[self.i] + " and " + opcode_str[self.i + 1])
         print ("and sending them to PreIssueBuffer")
-        PreIssueBuffer.put(opcode_str[self.i])
-        PreIssueBuffer.put(opcode_str[self.i + 1])
+        PreIssueBuffer.put([opcode_str[self.i], arg1[self.i], arg2[self.i], arg3[self.i], opcode[self.i]])
+        PreIssueBuffer.put([opcode_str[self.i+1], arg1[self.i+1], arg2[self.i+1], arg3[self.i+1], opcode[self.i+1]])
 
         print ("PreIssueBuffer now contains ")
         for x in list(PreIssueBuffer.queue):
@@ -119,7 +189,7 @@ class InstrFetch:
         # cache.insertItem(b)
         self.i += 2
 
-        return False
+        return True
 
 class LRUCacheItem(object):
     """Data structure of items stored in cache"""
@@ -187,7 +257,6 @@ class Cache:
 
         map(lambda x: self.removeItem(x), _outdated_items())
 
-
 class Processor:
     def __init__(self, instrs, opcodes, mem, valids, addrs, args1, args2, args3, numInstrs, dest, src1, src2):
         self.instruction = instrs
@@ -201,7 +270,7 @@ class Processor:
         self.destReg = dest
         self.src1Reg = src1
         self.src2Reg = src2
-        self.cycle = 0
+        self.cycle = 1
         self.WB = WriteBackUnit()
         self.ALU = ALUnit()
         self.MEM = MEMUnit()
@@ -214,6 +283,7 @@ class Processor:
     def run(self):
         go = True;
         while go:
+            self.printState()
             go = self.fetch.run(self.cache)
             self.issue.run()
             self.ALU.run()
@@ -235,207 +305,201 @@ class Processor:
     # #       self.printState()  # prints everything/ should only print once per cycle
     #         self.cycle += 1
 
-    # def printState(self):
-    #     for i in range(self.cycle):
-    #         print ("--------------------")
-    #         print ("Cycle: " + str(i + 1))
-    #         print ("Pre-Issue Buffer:")
-    #         for j in range(4):
-    #             print ("\tEntry " + str(j) + ":\t"),
-    #             if j < PreIssueBuffer.qsize():
-    #                 print (opcode_str[j] + " " + arg1Str[j] + arg2Str[j] + arg3Str[j])
-    #             else:
-    #                 print ("\t\n")
-    #         print ("Pre_ALU Queue:")
-    #         for j in range(2):
-    #             print ("\tEntry " + str(j) + ":")
-    #         print ("Post_ALU Queue:")
-    #         print ("\tEntry 0:")
-    #         print ("Pre_MEM Queue:")
-    #         for j in range(2):
-    #             print ("\tEntry " + str(j) + ":")
-    #         print ("Post_MEM Queue:")
-    #         print ("\tEntry 0:")
-    #         print ("Registers")
-    #         for j in range(32):
-    #             if j % 8 == 0:
-    #                 print "R" + str(j).zfill(2) + ":\t",
-    #             print str(regs[j]) + "\t",
-    #             if j % 8 == 7:
-    #                 print ("\n"),
-    #         print ("\nCache")
-    #         for j in range(4):
-    #             print ("Set " + str(j) + ":LRU="),
-    #             for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
-    #                 print ("\tEntry " + str(k) + ":[(" + "0" + "," + "0" + "," + "0" + ")<")
-    #             for i,item in enumerate(item_list):
-    #                 if item:
-    #                     print (item.item)
-    #                 print (",")
-    #             print (">]")
-    #         print ("\nData")
-
-
-class Simulator:
-
-    def __init__(self, inFile, outFile):
-
-        self.input_file_name = inFile
-        self.output_file_name = outFile
-        self.input_file = open(str(self.input_file_name))
-        self.outfile = open(self.output_file_name + "_sim.txt", 'w')
-        self.simulate_regs()
-
-    def simulate_regs(self):
-
-        cycleCount = 1
-        i = 0
-
-        while i < (len(opcode)):
-            if int(opcode[i], base=2) == 1112:  # ADD
-                regs[arg3[i]] = regs[arg1[i]] + regs[arg2[i]]
-
-            elif int(opcode[i], base=2) == 1624:  # SUB
-                regs[arg3[i]] = regs[arg1[i]] - regs[arg2[i]]
-
-            elif int(opcode[i], base=2) == 1104:  # AND
-                regs[arg3[i]] = regs[arg1[i]] & regs[arg2[i]]
-
-            elif int(opcode[i], base=2) == 1360:  # ORR
-                regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
-
-            elif 160 <= int(opcode[i], base=2) <= 191:  # B
-                # self.print_lists(i, cycleCount)
-                self.out_sim_to_file(i, cycleCount)
-                i = i + arg1[i]
-                cycleCount += 1
+    def printState(self):
+        print ("--------------------")
+        print ("Cycle: " + str(self.cycle))
+        print ("Pre-Issue Buffer:")
+        for j in range(4):
+            print ("\tEntry " + str(j) + ":\t")
+            try:
+                print list(PreIssueBuffer.queue[j])
+            except:
                 continue
-
-            elif int(opcode[i], base=2) in (1160, 1161):  # ADDI
-                regs[arg3[i]] = regs[arg1[i]] + arg2[i]
-
-            elif int(opcode[i], base=2) in (1672, 1673):  # SUBI
-                regs[arg3[i]] = regs[arg1[i]] - arg2[i]
-
-            elif 1440 <= int(opcode[i], base=2) <= 1447:  # CBZ
-                if regs[arg3[i]] == 0:
-                    # self.print_lists(i, cycleCount)
-                    self.out_sim_to_file(i, cycleCount)
-                    i = i + arg1[i]
-                    cycleCount += 1
-                    continue
-
-            elif 1448 <= int(opcode[i], base=2) <= 1455:  # CBNZ
-                if regs[arg3[i]] != 0:
-                    # self.print_lists(i, cycleCount)
-                    self.out_sim_to_file(i, cycleCount)
-                    i = i + arg1[i]
-                    cycleCount += 1
-                    continue
-
-            elif 1684 <= int(opcode[i], base=2) <= 1687:  # MOVZ
-                regs[arg3[i]] = 0
-                regs[arg3[i]] = arg1[i] << arg2[i]
-
-            elif 1940 <= int(opcode[i], base=2) <= 1943:  # MOVK
-                regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
-
-            elif int(opcode[i], base=2) == 1986:  # LDUR
-                regs[arg3[i]] = data[arg2[i] - offset]
-
-            elif int(opcode[i], base=2) == 1984:  # STUR
-                while len(data) < arg2[i]:
-                    data.extend(dataExt)
-
-                base = regs[arg3[i]]
-                offset = ((addr[-1] + 4) - base) / 4
-
-                data[arg2[i] - offset] = regs[arg3[i]]
-
-            elif int(opcode[i], base=2) == 1872:  # EOR
-                regs[arg3[i]] = regs[arg1[i]] ^ regs[arg2[i]]
-
-            elif int(opcode[i], base=2) == 1690:  # LSR
-                regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
-
-            elif int(opcode[i], base=2) == 1691:  # LSL
-                regs[arg3[i]] = regs[arg1[i]] << arg2[i]
-
-            elif int(opcode[i], base=2) == 1692:  # ASR
-                regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
-
-            # elif int(opcode[i], base=2) == 0:         #NOP
-
-            # elif int(opcode[i], base=2) == 2038:      #BREAK
-
-            # Use this for debugging
-            # self.print_lists(i, cycleCount)
-
-            # Commented out because simulator output file no longer needed for assignment
-            # self.out_sim_to_file(i, cycleCount)
-            cycleCount += 1
-            i += 1
-
-    def print_lists(self, i, cycleCount):
-        print ("====================\n")
-        print ("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + " " + arg1Str[i] +
-               arg2Str[
-                   i] + arg3Str[i])
-        print ("\n")
-        print ("registers:\n")
+        print ("Pre_ALU Queue:")
+        for j in range(2):
+            print ("\tEntry " + str(j) + ":")
+        print ("Post_ALU Queue:")
+        print ("\tEntry 0:")
+        print ("Pre_MEM Queue:")
+        for j in range(2):
+            print ("\tEntry " + str(j) + ":")
+        print ("Post_MEM Queue:")
+        print ("\tEntry 0:")
+        print ("Registers")
         for j in range(32):
             if j % 8 == 0:
-                print "r" + str(j).zfill(2) + ":\t",
+                print "R" + str(j).zfill(2) + ":\t",
             print str(regs[j]) + "\t",
             if j % 8 == 7:
                 print ("\n"),
-        print ("\n"),
-        print ("data:")
+        print ("\nCache")
+        for j in range(4):
+            print ("Set " + str(j) + ":LRU=")
+            for k in range(2):  #you'll need to come back and fix this to print queues!!!!!!!!!!!
+                print ("\tEntry " + str(k) + ":[(" + "0" + "," + "0" + "," + "0" + ")<" + "," +">]")
+        print ("\nData")
 
-        line = 32
-        if not data:
-            return
-        k = addr[-1] + 4
-        for j in range(len(data)):
-            if j % 8 == 0:
-                print str(k) + ":\t",
-                k += line
-            print str(data[j]) + "\t",
-            if j % 8 == 7:
-                print ("\n"),
 
-    def out_sim_to_file(self, i, cycleCount):
-        self.outfile.write("=====================\n")
-        self.outfile.write("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]))
-        if arg1Str[i] != "" or arg2Str[i] != "":
-            self.outfile.write("\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
-        self.outfile.write("\n\n")
-        self.outfile.write("registers:\n")
-        for j in range(32):
-            if j % 8 == 0:
-                self.outfile.write("r" + str(j).zfill(2) + ":\t")
-            if j % 8 != 7:
-                self.outfile.write(str(regs[j]) + "\t")
-            if j % 8 == 7:
-                self.outfile.write(str(regs[j]) + "\n")
-        self.outfile.write("\n")
-        if not data:
-            self.outfile.write("data:" + "\n\n\n")
-        else:
-            self.outfile.write("data:" + "\n")
-
-        line = 32
-        if not data:
-            return
-        k = addr[-1] + 4
-        for j in range(len(data)):
-            if j % 8 == 0:
-                self.outfile.write(str(k) + ":")
-                k += line
-            if j % 8 != 7:
-                self.outfile.write(str(data[j]) + "\t")
-            if j % 8 == 7:
-                self.outfile.write(str(data[j]) + "\n")
+# class Simulator:
+#
+#     def __init__(self, inFile, outFile):
+#
+#         self.input_file_name = inFile
+#         self.output_file_name = outFile
+#         self.input_file = open(str(self.input_file_name))
+#         self.outfile = open(self.output_file_name + "_sim.txt", 'w')
+#         self.simulate_regs()
+#
+#     def simulate_regs(self):
+#
+#         cycleCount = 1
+#         i = 0
+#
+#         while i < (len(opcode)):
+#             if int(opcode[i], base=2) == 1112:  # ADD
+#                 regs[arg3[i]] = regs[arg1[i]] + regs[arg2[i]]
+#
+#             elif int(opcode[i], base=2) == 1624:  # SUB
+#                 regs[arg3[i]] = regs[arg1[i]] - regs[arg2[i]]
+#
+#             elif int(opcode[i], base=2) == 1104:  # AND
+#                 regs[arg3[i]] = regs[arg1[i]] & regs[arg2[i]]
+#
+#             elif int(opcode[i], base=2) == 1360:  # ORR
+#                 regs[arg3[i]] = regs[arg1[i]] | regs[arg2[i]]
+#
+#             elif 160 <= int(opcode[i], base=2) <= 191:  # B
+#                 # self.print_lists(i, cycleCount)
+#                 self.out_sim_to_file(i, cycleCount)
+#                 i = i + arg1[i]
+#                 cycleCount += 1
+#                 continue
+#
+#             elif int(opcode[i], base=2) in (1160, 1161):  # ADDI
+#                 regs[arg3[i]] = regs[arg1[i]] + arg2[i]
+#
+#             elif int(opcode[i], base=2) in (1672, 1673):  # SUBI
+#                 regs[arg3[i]] = regs[arg1[i]] - arg2[i]
+#
+#             elif 1440 <= int(opcode[i], base=2) <= 1447:  # CBZ
+#                 if regs[arg3[i]] == 0:
+#                     # self.print_lists(i, cycleCount)
+#                     self.out_sim_to_file(i, cycleCount)
+#                     i = i + arg1[i]
+#                     cycleCount += 1
+#                     continue
+#
+#             elif 1448 <= int(opcode[i], base=2) <= 1455:  # CBNZ
+#                 if regs[arg3[i]] != 0:
+#                     # self.print_lists(i, cycleCount)
+#                     self.out_sim_to_file(i, cycleCount)
+#                     i = i + arg1[i]
+#                     cycleCount += 1
+#                     continue
+#
+#             elif 1684 <= int(opcode[i], base=2) <= 1687:  # MOVZ
+#                 regs[arg3[i]] = 0
+#                 regs[arg3[i]] = arg1[i] << arg2[i]
+#
+#             elif 1940 <= int(opcode[i], base=2) <= 1943:  # MOVK
+#                 regs[arg3[i]] = regs[arg3[i]] + (arg1[i] << arg2[i])
+#
+#             elif int(opcode[i], base=2) == 1986:  # LDUR
+#                 regs[arg3[i]] = data[arg2[i] - offset]
+#
+#             elif int(opcode[i], base=2) == 1984:  # STUR
+#                 while len(data) < arg2[i]:
+#                     data.extend(dataExt)
+#
+#                 base = regs[arg3[i]]
+#                 offset = ((addr[-1] + 4) - base) / 4
+#
+#                 data[arg2[i] - offset] = regs[arg3[i]]
+#
+#             elif int(opcode[i], base=2) == 1872:  # EOR
+#                 regs[arg3[i]] = regs[arg1[i]] ^ regs[arg2[i]]
+#
+#             elif int(opcode[i], base=2) == 1690:  # LSR
+#                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
+#
+#             elif int(opcode[i], base=2) == 1691:  # LSL
+#                 regs[arg3[i]] = regs[arg1[i]] << arg2[i]
+#
+#             elif int(opcode[i], base=2) == 1692:  # ASR
+#                 regs[arg3[i]] = regs[arg1[i]] >> arg2[i]
+#
+#             # elif int(opcode[i], base=2) == 0:         #NOP
+#
+#             # elif int(opcode[i], base=2) == 2038:      #BREAK
+#
+#             # Use this for debugging
+#             # self.print_lists(i, cycleCount)
+#
+#             # Commented out because simulator output file no longer needed for assignment
+#             # self.out_sim_to_file(i, cycleCount)
+#             cycleCount += 1
+#             i += 1
+#
+#     def print_lists(self, i, cycleCount):
+#         print ("====================\n")
+#         print ("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]) + " " + arg1Str[i] +
+#                arg2Str[
+#                    i] + arg3Str[i])
+#         print ("\n")
+#         print ("registers:\n")
+#         for j in range(32):
+#             if j % 8 == 0:
+#                 print "r" + str(j).zfill(2) + ":\t",
+#             print str(regs[j]) + "\t",
+#             if j % 8 == 7:
+#                 print ("\n"),
+#         print ("\n"),
+#         print ("data:")
+#
+#         line = 32
+#         if not data:
+#             return
+#         k = addr[-1] + 4
+#         for j in range(len(data)):
+#             if j % 8 == 0:
+#                 print str(k) + ":\t",
+#                 k += line
+#             print str(data[j]) + "\t",
+#             if j % 8 == 7:
+#                 print ("\n"),
+#
+#     def out_sim_to_file(self, i, cycleCount):
+#         self.outfile.write("=====================\n")
+#         self.outfile.write("cycle:" + str(cycleCount) + "\t" + str(addr[i]) + "\t" + str(opcode_str[i]))
+#         if arg1Str[i] != "" or arg2Str[i] != "":
+#             self.outfile.write("\t" + arg1Str[i] + arg2Str[i] + arg3Str[i])
+#         self.outfile.write("\n\n")
+#         self.outfile.write("registers:\n")
+#         for j in range(32):
+#             if j % 8 == 0:
+#                 self.outfile.write("r" + str(j).zfill(2) + ":\t")
+#             if j % 8 != 7:
+#                 self.outfile.write(str(regs[j]) + "\t")
+#             if j % 8 == 7:
+#                 self.outfile.write(str(regs[j]) + "\n")
+#         self.outfile.write("\n")
+#         if not data:
+#             self.outfile.write("data:" + "\n\n\n")
+#         else:
+#             self.outfile.write("data:" + "\n")
+#
+#         line = 32
+#         if not data:
+#             return
+#         k = addr[-1] + 4
+#         for j in range(len(data)):
+#             if j % 8 == 0:
+#                 self.outfile.write(str(k) + ":")
+#                 k += line
+#             if j % 8 != 7:
+#                 self.outfile.write(str(data[j]) + "\t")
+#             if j % 8 == 7:
+#                 self.outfile.write(str(data[j]) + "\n")
 
 
 class Disassembler:
@@ -447,7 +511,7 @@ class Disassembler:
         self.input_file = open(str(self.input_file_name))
         self.input_to_lists()
         self.print_lists()
-        Simulator(self.input_file_name, self.output_file_name)
+        #Simulator(self.input_file_name, self.output_file_name)
         Processor(raw_instruction, opcode, None, None, addr, arg1, arg2, arg3, len(opcode), None, None, None)
 
     # get_io_params() sets input_file_name and output_file_name to the string values immediately after the -i and -o args
